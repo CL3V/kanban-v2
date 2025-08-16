@@ -168,7 +168,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     e.preventDefault();
     if (!formData.title?.trim()) return;
 
-    onSave(formData);
+    // If creating and a defaultStatus was provided but not set in formData, include it
+    const payload = { ...formData } as any;
+    if (!task && defaultStatus && !("status" in payload)) {
+      payload.status = defaultStatus;
+    }
+
+    onSave(payload);
     onClose();
   };
 
@@ -330,41 +336,44 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </select>
           </div>
 
-          {((isEditing && "status" in formData) ||
-            (!task && defaultStatus)) && (
-            <div>
-              <label
-                htmlFor="status"
-                className="block text-sm font-medium text-secondary-700 mb-2"
-              >
-                Status
-              </label>
-              <select
-                id="status"
-                value={
-                  (formData as UpdateTaskRequest).status || defaultStatus || ""
-                }
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    status: e.target.value as TaskStatus,
-                  }))
-                }
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                  isEditing || !task
-                    ? "border-secondary-300 bg-white"
-                    : "border-secondary-200 bg-secondary-50"
-                }`}
-                disabled={!isEditing && !!task}
-              >
-                {columns.map((column) => (
-                  <option key={column.id} value={column.status}>
-                    {column.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {columns.length > 0 &&
+            ((isEditing && "status" in formData) ||
+              (!task && defaultStatus)) && (
+              <div>
+                <label
+                  htmlFor="status"
+                  className="block text-sm font-medium text-secondary-700 mb-2"
+                >
+                  Status
+                </label>
+                <select
+                  id="status"
+                  value={
+                    (formData as UpdateTaskRequest).status ||
+                    defaultStatus ||
+                    ""
+                  }
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      status: e.target.value as TaskStatus,
+                    }))
+                  }
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                    isEditing || !task
+                      ? "border-secondary-300 bg-white"
+                      : "border-secondary-200 bg-secondary-50"
+                  }`}
+                  disabled={!isEditing && !!task}
+                >
+                  {columns.map((column) => (
+                    <option key={column.id} value={column.status}>
+                      {column.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
         </div>
 
         {/* Assignee and Due Date Row */}
@@ -611,7 +620,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => comment.id}
+                                onClick={() => handleDeleteComment(comment.id)}
                                 className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
                               >
                                 <Trash2 className="h-3 w-3" />

@@ -71,7 +71,8 @@ export const useBoard = (boardId: string): UseBoardState & UseBoardActions => {
 
         const newTask = await response.json();
 
-        // Optimistic update with duplicate check
+        // Try optimistic update, otherwise refresh board to sync server-created columns
+        let placedOptimistically = false;
         setBoard((prevBoard) => {
           if (!prevBoard) return prevBoard;
 
@@ -82,18 +83,26 @@ export const useBoard = (boardId: string): UseBoardState & UseBoardActions => {
           const column = updatedBoard.columns.find(
             (col) => col.status === newTask.status
           );
-          if (column && !column.taskIds.includes(newTask.id)) {
-            column.taskIds.push(newTask.id);
+          if (column) {
+            if (!column.taskIds.includes(newTask.id)) {
+              column.taskIds.push(newTask.id);
+            }
+            placedOptimistically = true;
           }
 
           return updatedBoard;
         });
+
+        // If we couldn't place the task (e.g., board had zero columns), fetch latest board from server
+        if (!placedOptimistically) {
+          await fetchBoard();
+        }
       } catch (err) {
         console.error("Error creating task:", err);
         throw err;
       }
     },
-    [boardId, board]
+    [boardId, board, fetchBoard]
   );
 
   const updateTask = useCallback(

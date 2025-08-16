@@ -72,7 +72,7 @@ export const Column: React.FC<ColumnProps> = ({
       </div>
 
       {/* Tasks Container with Drop Zone */}
-      <div className="flex-1 p-3 space-y-3 overflow-y-auto min-h-[200px]">
+      <div className="flex-1 p-3 space-y-3 overflow-y-auto min-h-[200px] vertical-scrollbar">
         <SortableContext
           items={tasks.map((task) => task.id)}
           strategy={verticalListSortingStrategy}

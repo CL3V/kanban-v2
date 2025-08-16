@@ -245,11 +245,29 @@ export class S3Service {
         throw new Error(`Board ${boardId} not found`);
       }
 
+      // If the board has no columns, create a sensible default column
+      if (!Array.isArray(board.columns) || board.columns.length === 0) {
+        board.columns = [
+          {
+            id: `col-${Date.now()}`,
+            title: "To Do",
+            status: (task.status as any) || ("todo" as any),
+            taskIds: [],
+            color: "#3b82f6", // tailwind blue-500
+          },
+        ];
+      }
+
       // Add task to board
       board.tasks[task.id] = task;
 
-      // Add task to appropriate column
-      const column = board.columns.find((col) => col.status === task.status);
+      // Add task to appropriate column (fallback to first column if no matching status)
+      let column = board.columns.find((col) => col.status === task.status);
+      if (!column && board.columns.length > 0) {
+        // If no column matches the task.status, place in first column and align status to it
+        column = board.columns[0];
+        task.status = column.status as any;
+      }
       if (column && !column.taskIds.includes(task.id)) {
         column.taskIds.push(task.id);
       }

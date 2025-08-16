@@ -24,11 +24,21 @@ export async function POST(
     const taskId = uuidv4();
     const now = new Date().toISOString();
 
+    // Determine status: use requested status if it matches a board column, else first column, else 'todo'
+    const requestedStatus = body.status;
+    const hasRequestedColumn = requestedStatus
+      ? existingBoard.columns?.some((c) => c.status === requestedStatus)
+      : false;
+
+    const defaultStatus = existingBoard.columns?.[0]?.status || "todo";
+
     const newTask: Task = {
       id: taskId,
       title: body.title,
       description: body.description,
-      status: "backlog", // Use default first column status
+      status: hasRequestedColumn
+        ? (requestedStatus as any)
+        : (defaultStatus as any),
       priority: body.priority,
       assignee: body.assignee,
       reporter: "Current User", // In a real app, this would come from authentication

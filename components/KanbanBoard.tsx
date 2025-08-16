@@ -459,7 +459,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen overflow-y-hidden">
       {/* Board Header */}
       <BoardHeader
         board={board!}
@@ -487,8 +487,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 overflow-x-auto bg-gray-50">
-          <div className="flex gap-4 p-6 h-full min-w-max">
+        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden bg-gray-50 horizontal-scrollbar">
+          <div className="flex gap-3 sm:gap-4 p-4 sm:p-6 h-full min-w-max">
             {filteredColumnData.map(({ column, tasks }) => (
               <Column
                 key={column.id}
