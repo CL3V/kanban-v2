@@ -33,10 +33,7 @@ export async function PUT(
     const { memberId } = await params;
     const updates = await request.json();
 
-    const updatedMember = await MemberService.updateMember(
-      memberId,
-      updates
-    );
+    const updatedMember = await MemberService.updateMember(memberId, updates);
 
     return NextResponse.json({
       member: updatedMember,

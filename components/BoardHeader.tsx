@@ -7,9 +7,6 @@ import {
   Settings,
   Plus,
   ArrowLeft,
-  Edit,
-  Save,
-  X,
   Search,
   Filter,
   ChevronDown,
@@ -43,16 +40,42 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
   canCreateTask = true,
   canManageBoard = true,
 }) => {
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
-  const [tempTitle, setTempTitle] = useState(board.title);
-  const [tempDescription, setTempDescription] = useState(
-    board.description || ""
-  );
-  const [isSaving, setIsSaving] = useState(false);
+  // Title is read-only in header
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<TaskFilters>({});
+
+  // Persist filters/search per board
+  useEffect(() => {
+    try {
+      const key = `kanban:boardFilters:${board.id}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (typeof saved.searchTerm === "string") {
+          setSearchTerm(saved.searchTerm);
+          onSearchChange?.(saved.searchTerm);
+        }
+        if (saved.filters && typeof saved.filters === "object") {
+          setFilters(saved.filters);
+          onFiltersChange?.(saved.filters);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore board filters from cache", e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [board.id]);
+
+  useEffect(() => {
+    try {
+      const key = `kanban:boardFilters:${board.id}`;
+      const payload = JSON.stringify({ searchTerm, filters });
+      localStorage.setItem(key, payload);
+    } catch {
+      // ignore write errors
+    }
+  }, [board.id, searchTerm, filters]);
 
   // Close filters dropdown when clicking outside
   useEffect(() => {
@@ -106,91 +129,7 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
     return Array.from(allTags).sort();
   };
 
-  const handleSaveTitle = useCallback(async () => {
-    const trimmedTitle = tempTitle.trim();
-    if (trimmedTitle && trimmedTitle !== board.title) {
-      setIsSaving(true);
-      try {
-        console.log(
-          "BoardHeader: Updating title from",
-          board.title,
-          "to",
-          trimmedTitle
-        );
-        const updateData = { title: trimmedTitle };
-        console.log("BoardHeader: Update data for title:", updateData);
-        await onUpdateBoard(updateData);
-        console.log("BoardHeader: Title updated successfully");
-      } catch (error) {
-        console.error("BoardHeader: Failed to update title:", error);
-        setTempTitle(board.title); // Revert on error
-        alert(
-          `Failed to update title: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      } finally {
-        setIsSaving(false);
-      }
-    }
-    setIsEditingTitle(false);
-  }, [tempTitle, board.title, onUpdateBoard]);
-
-  const handleSaveDescription = useCallback(async () => {
-    if (tempDescription !== board.description) {
-      setIsSaving(true);
-      try {
-        console.log(
-          "BoardHeader: Updating description from",
-          board.description,
-          "to",
-          tempDescription
-        );
-        const updateData = { description: tempDescription };
-        console.log("BoardHeader: Update data for description:", updateData);
-        await onUpdateBoard(updateData);
-        console.log("BoardHeader: Description updated successfully");
-      } catch (error) {
-        console.error("BoardHeader: Failed to update description:", error);
-        setTempDescription(board.description || ""); // Revert on error
-        alert(
-          `Failed to update description: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      } finally {
-        setIsSaving(false);
-      }
-    }
-    setIsEditingDescription(false);
-  }, [tempDescription, board.description, onUpdateBoard]);
-
-  const handleCancelTitle = useCallback(() => {
-    setTempTitle(board.title);
-    setIsEditingTitle(false);
-  }, [board.title]);
-
-  const handleCancelDescription = useCallback(() => {
-    setTempDescription(board.description || "");
-    setIsEditingDescription(false);
-  }, [board.description]);
-
-  const handleKeyPress = useCallback(
-    (
-      e: React.KeyboardEvent,
-      saveHandler: () => void,
-      cancelHandler: () => void
-    ) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        saveHandler();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        cancelHandler();
-      }
-    },
-    []
-  );
+  // Editing disabled: title and description are read-only here
 
   const handleFilterChange = useCallback(
     (newFilters: TaskFilters) => {
@@ -201,7 +140,7 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
   );
 
   const clearFilters = useCallback(() => {
-    const emptyFilters = {};
+    const emptyFilters: TaskFilters = {};
     setFilters(emptyFilters);
     onFiltersChange?.(emptyFilters);
   }, [onFiltersChange]);
@@ -220,50 +159,9 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
             </Link>
 
             <div>
-              {isEditingTitle ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={tempTitle}
-                    onChange={(e) => setTempTitle(e.target.value)}
-                    onKeyDown={(e) =>
-                      handleKeyPress(e, handleSaveTitle, handleCancelTitle)
-                    }
-                    className="text-xl font-semibold bg-transparent border-b border-blue-500 focus:outline-none focus:border-blue-600"
-                    autoFocus
-                    disabled={isSaving}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleSaveTitle}
-                    disabled={!tempTitle.trim() || isSaving}
-                  >
-                    <Save className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCancelTitle}
-                    disabled={isSaving}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-semibold text-gray-900">
-                    {board.title}
-                  </h1>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setIsEditingTitle(true)}
-                    className="text-gray-500 hover:text-gray-700 p-1"
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
+              <h1 className="text-xl font-semibold text-gray-900">
+                {board.title}
+              </h1>
             </div>
           </div>
 

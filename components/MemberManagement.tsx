@@ -32,6 +32,17 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   onMembersUpdate,
   onBoardStateUpdate,
 }) => {
+  // In this simplified setup, we read currentUser from localStorage on mount
+  const [currentUser, setCurrentUser] = useState<Member | null>(null);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("currentUser");
+      if (saved) setCurrentUser(JSON.parse(saved));
+    } catch {}
+  }, []);
+  const canManage = currentUser
+    ? PermissionService.canManageProjectMembers(currentUser)
+    : false;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGlobalMembersModalOpen, setIsGlobalMembersModalOpen] =
     useState(false);
@@ -69,6 +80,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   };
 
   const openAddExistingMembers = () => {
+    if (!canManage) return;
     setSelectedMembers(new Set());
     setIsGlobalMembersModalOpen(true);
     fetchGlobalMembers();
@@ -85,6 +97,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   };
 
   const handleAddSelectedMembers = async () => {
+    if (!canManage) return;
     if (selectedMembers.size === 0) return;
 
     try {
@@ -135,11 +148,13 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   };
 
   const openAddMember = () => {
+    if (!canManage) return;
     resetForm();
     setIsModalOpen(true);
   };
 
   const openEditMember = (member: Member) => {
+    if (!canManage) return;
     setFormData({
       name: member.name,
       email: member.email,
@@ -151,6 +166,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canManage) return;
     if (!formData.name.trim() || !formData.email.trim()) return;
 
     try {
@@ -194,6 +210,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   };
 
   const handleDeleteMember = async (memberId: string, memberName: string) => {
+    if (!canManage) return;
     if (!confirm(`Remove ${memberName} from this board?`)) return;
 
     try {
@@ -265,12 +282,18 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
             Team Members ({membersList.length})
           </h3>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={openAddExistingMembers}>
-            <Users className="h-4 w-4 mr-1" />
-            Add Existing
-          </Button>
-        </div>
+        {canManage && (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={openAddExistingMembers}
+            >
+              <Users className="h-4 w-4 mr-1" />
+              Add
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Members List */}
@@ -278,16 +301,18 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
         <div className="text-center py-8 bg-secondary-50 rounded-lg border-2 border-dashed border-secondary-300">
           <Users className="h-8 w-8 text-secondary-400 mx-auto mb-2" />
           <p className="text-secondary-500 mb-3">No team members yet</p>
-          <div className="flex gap-2 justify-center">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={openAddExistingMembers}
-            >
-              <Users className="h-4 w-4 mr-1" />
-              Add Existing
-            </Button>
-          </div>
+          {canManage && (
+            <div className="flex gap-2 justify-center">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={openAddExistingMembers}
+              >
+                <Users className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
@@ -320,23 +345,25 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
                   <p className="text-sm text-secondary-500">{member.email}</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => openEditMember(member)}
-                >
-                  <Edit className="h-3 w-3" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleDeleteMember(member.id, member.name)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
+              {canManage && (
+                <div className="flex items-center space-x-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => openEditMember(member)}
+                  >
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDeleteMember(member.id, member.name)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -351,89 +378,95 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
         }}
         title={editingMember ? "Edit Member" : "Add New Member"}
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-2">
-              <User className="inline h-4 w-4 mr-1" />
-              Full Name *
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, name: e.target.value }))
-              }
-              className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Enter full name..."
-              required
-            />
-          </div>
+        {canManage ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-secondary-700 mb-2">
+                <User className="inline h-4 w-4 mr-1" />
+                Full Name *
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, name: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter full name..."
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-2">
-              <Mail className="inline h-4 w-4 mr-1" />
-              Email Address *
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, email: e.target.value }))
-              }
-              className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Enter email address..."
-              required
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-secondary-700 mb-2">
+                <Mail className="inline h-4 w-4 mr-1" />
+                Email Address *
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, email: e.target.value }))
+                }
+                className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter email address..."
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-2">
-              Role
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  role: e.target.value as "admin" | "member" | "viewer",
-                }))
-              }
-              className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            >
-              <option value="member">
-                👤 Member - Can create and edit tasks
-              </option>
-              <option value="admin">👑 Admin - Full board permissions</option>
-              <option value="viewer">👁️ Viewer - Read-only access</option>
-            </select>
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-secondary-700 mb-2">
+                Role
+              </label>
+              <select
+                value={formData.role}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    role: e.target.value as "admin" | "member" | "viewer",
+                  }))
+                }
+                className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="member">
+                  👤 Member - Can create and edit tasks
+                </option>
+                <option value="admin">👑 Admin - Full board permissions</option>
+                <option value="viewer">👁️ Viewer - Read-only access</option>
+              </select>
+            </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setIsModalOpen(false);
-                resetForm();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={!formData.name.trim() || !formData.email.trim()}
-            >
-              {editingMember ? "Update Member" : "Add Member"}
-            </Button>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  resetForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!formData.name.trim() || !formData.email.trim()}
+              >
+                {editingMember ? "Update Member" : "Add Member"}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="text-secondary-600 text-sm">
+            You don't have permission to manage members.
           </div>
-        </form>
+        )}
       </Modal>
 
       {/* Global Members Selection Modal */}
       <Modal
         isOpen={isGlobalMembersModalOpen}
         onClose={() => setIsGlobalMembersModalOpen(false)}
-        title="Add Existing Members"
+        title="Add Members"
       >
         <div className="p-6">
           <div className="flex items-center gap-2 mb-6">

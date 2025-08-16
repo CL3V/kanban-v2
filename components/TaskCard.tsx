@@ -115,7 +115,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <h3 className="text-sm font-medium text-gray-900 mb-2 line-clamp-2 leading-tight">
         {task.title}
       </h3>
-
       {/* Bottom Row - Ticket number, priority, assignee */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">

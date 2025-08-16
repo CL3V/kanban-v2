@@ -8,6 +8,7 @@ import { MemberManagement } from "./MemberManagement";
 import { ColumnManagement } from "./ColumnManagement";
 import { BoardDetailsManagement } from "./BoardDetailsManagement";
 import { Settings, X } from "lucide-react";
+import { PermissionService } from "@/lib/PermissionService";
 
 interface BoardSettingsProps {
   board: Board;
@@ -59,6 +60,13 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
     }
   };
 
+  const canManageMembers = currentUser
+    ? PermissionService.canManageProjectMembers(currentUser)
+    : false;
+  const canManageColumns = currentUser
+    ? PermissionService.canManageColumns(currentUser)
+    : false;
+
   return (
     <>
       {externalIsOpen === undefined && (
@@ -97,26 +105,30 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
             >
               Board Details
             </button>
-            <button
-              onClick={() => setActiveTab("members")}
-              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                activeTab === "members"
-                  ? "bg-white text-primary-600 shadow-sm"
-                  : "text-secondary-600 hover:text-secondary-900"
-              }`}
-            >
-              Team Members
-            </button>
-            <button
-              onClick={() => setActiveTab("columns")}
-              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                activeTab === "columns"
-                  ? "bg-white text-primary-600 shadow-sm"
-                  : "text-secondary-600 hover:text-secondary-900"
-              }`}
-            >
-              Board Columns
-            </button>
+            {canManageMembers && (
+              <button
+                onClick={() => setActiveTab("members")}
+                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === "members"
+                    ? "bg-white text-primary-600 shadow-sm"
+                    : "text-secondary-600 hover:text-secondary-900"
+                }`}
+              >
+                Team Members
+              </button>
+            )}
+            {canManageColumns && (
+              <button
+                onClick={() => setActiveTab("columns")}
+                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                  activeTab === "columns"
+                    ? "bg-white text-primary-600 shadow-sm"
+                    : "text-secondary-600 hover:text-secondary-900"
+                }`}
+              >
+                Board Columns
+              </button>
+            )}
           </div>
 
           {/* Tab Content */}
@@ -129,7 +141,7 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
               />
             )}
 
-            {activeTab === "members" && (
+            {activeTab === "members" && canManageMembers && (
               <MemberManagement
                 boardId={board.id}
                 members={board.members || {}}
@@ -138,7 +150,7 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
               />
             )}
 
-            {activeTab === "columns" && (
+            {activeTab === "columns" && canManageColumns && (
               <ColumnManagement
                 boardId={board.id}
                 columns={board.columns}

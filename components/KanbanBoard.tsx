@@ -519,12 +519,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         isOpen={isTaskModalOpen}
         onClose={closeModal}
         task={
-          selectedTask && board?.tasks[selectedTask.id]
-            ? board.tasks[selectedTask.id]
-            : selectedTask || undefined
+          selectedTask
+            ? board?.tasks[selectedTask.id] || selectedTask
+            : undefined
         }
         members={board?.members || {}}
         columns={board?.columns || []}
+        allTasks={board?.tasks}
         defaultStatus={isCreating ? activeColumnStatus || undefined : undefined}
         onSave={handleTaskSave}
         onDelete={

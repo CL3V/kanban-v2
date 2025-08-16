@@ -31,6 +31,7 @@ interface TaskModalProps {
   task?: Task;
   members: { [memberId: string]: Member };
   columns: Column[];
+  allTasks?: { [taskId: string]: Task };
   defaultStatus?: TaskStatus;
   onSave: (taskData: CreateTaskRequest | UpdateTaskRequest) => void;
   onDelete?: () => void;
@@ -47,6 +48,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   task,
   members,
   columns,
+  allTasks,
   defaultStatus,
   onSave,
   onDelete,
@@ -70,6 +72,34 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   const [tagInput, setTagInput] = useState("");
   const [newComment, setNewComment] = useState("");
+  const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+
+  // Get all existing tags from other tasks
+  const getExistingTags = (): string[] => {
+    if (!allTasks) return [];
+
+    const allTags = new Set<string>();
+    Object.values(allTasks).forEach((taskItem) => {
+      taskItem.tags?.forEach((tag) => allTags.add(tag));
+    });
+
+    return Array.from(allTags).sort();
+  };
+
+  // Filter tag suggestions based on input
+  const getFilteredTagSuggestions = (): string[] => {
+    const existingTags = getExistingTags();
+    const currentTags = formData.tags || [];
+
+    return existingTags.filter((tag) => {
+      // Don't show tags that are already added
+      if (currentTags.includes(tag)) return false;
+
+      // Filter based on input
+      if (!tagInput.trim()) return true;
+      return tag.toLowerCase().includes(tagInput.toLowerCase());
+    });
+  };
 
   // Helper function to get initials from a name
   const getInitials = (name: string): string => {
@@ -156,8 +186,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const handleDeleteComment = async (commentId: string) => {
     if (!task || !currentUser || !onDeleteComment) return;
 
-    if (!confirm("Are you sure you want to delete this comment?")) return;
-
     try {
       await onDeleteComment(task.id, commentId);
     } catch (error) {
@@ -165,13 +193,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
   };
 
-  const handleAddTag = () => {
-    if (tagInput.trim() && !formData.tags?.includes(tagInput.trim())) {
+  const handleAddTag = (tagToAdd?: string) => {
+    const tag = tagToAdd || tagInput.trim();
+    if (tag && !formData.tags?.includes(tag)) {
       setFormData((prev) => ({
         ...prev,
-        tags: [...(prev.tags || []), tagInput.trim()],
+        tags: [...(prev.tags || []), tag],
       }));
       setTagInput("");
+      setShowTagSuggestions(false);
     }
   };
 
@@ -186,7 +216,24 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     if (e.key === "Enter" && tagInput.trim()) {
       e.preventDefault();
       handleAddTag();
+    } else if (e.key === "Escape") {
+      setShowTagSuggestions(false);
     }
+  };
+
+  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTagInput(value);
+    setShowTagSuggestions(value.length > 0 || getExistingTags().length > 0);
+  };
+
+  const handleTagInputFocus = () => {
+    setShowTagSuggestions(getExistingTags().length > 0);
+  };
+
+  const handleTagInputBlur = () => {
+    // Delay hiding suggestions to allow clicking on them
+    setTimeout(() => setShowTagSuggestions(false), 150);
   };
 
   return (
@@ -427,23 +474,53 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             ))}
           </div>
           {(isEditing || !task) && (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="flex-1 px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="Add a tag..."
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAddTag}
-                disabled={!tagInput.trim()}
-              >
-                Add
-              </Button>
+            <div className="relative">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={handleTagInputChange}
+                  onKeyPress={handleKeyPress}
+                  onFocus={handleTagInputFocus}
+                  onBlur={handleTagInputBlur}
+                  className="flex-1 px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Add a tag..."
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleAddTag()}
+                  disabled={!tagInput.trim()}
+                >
+                  Add
+                </Button>
+              </div>
+
+              {/* Tag Suggestions Dropdown */}
+              {showTagSuggestions && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-secondary-200 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                  {getFilteredTagSuggestions().length > 0 ? (
+                    <div className="py-1">
+                      {getFilteredTagSuggestions().map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => handleAddTag(tag)}
+                          className="w-full px-3 py-2 text-left hover:bg-secondary-50 text-sm text-secondary-700"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    tagInput.trim() && (
+                      <div className="py-2 px-3 text-sm text-secondary-500">
+                        Press Enter to add "{tagInput.trim()}" as a new tag
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -531,9 +608,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                               currentUser.role === "admin") &&
                             onDeleteComment && (
                               <Button
+                                type="button"
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeleteComment(comment.id)}
+                                onClick={() => comment.id}
                                 className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
                               >
                                 <Trash2 className="h-3 w-3" />

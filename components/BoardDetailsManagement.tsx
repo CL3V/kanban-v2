@@ -21,11 +21,10 @@ export const BoardDetailsManagement: React.FC<BoardDetailsManagementProps> = ({
   const [description, setDescription] = useState(board.description || "");
   const [loading, setLoading] = useState(false);
 
-  // Check if user can edit board details
-  const canEditBoard = currentUser && (
-    currentUser.role === "admin" || 
-    currentUser.role === "project_manager" ||
-    (board.members && board.members[currentUser.id])
+  // Only admins and project managers can edit board details
+  const canEditBoard = !!(
+    currentUser &&
+    (currentUser.role === "admin" || currentUser.role === "project_manager")
   );
 
   const handleSave = async () => {
