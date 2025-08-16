@@ -1,4 +1,8 @@
 export type TaskStatus =
+  | "todo"
+  | "in-progress"
+  | "in-review"
+  | "done"
   | "backlog"
   | "in-development"
   | "code-review"
@@ -47,8 +51,10 @@ export interface Member {
   name: string;
   email: string;
   avatar?: string;
-  role: "admin" | "member" | "viewer";
+  role: "admin" | "project_manager" | "member" | "viewer";
   color: string;
+  createdAt?: string;
+  lastActive?: string;
 }
 
 export interface Board {

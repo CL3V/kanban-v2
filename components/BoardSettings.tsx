@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Board } from "@/types/kanban";
+import { Board, Member } from "@/types/kanban";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
 import { MemberManagement } from "./MemberManagement";
@@ -11,36 +11,69 @@ import { Settings, X } from "lucide-react";
 
 interface BoardSettingsProps {
   board: Board;
-  onBoardUpdate: () => void;
+  onBoardUpdate: (boardData: Partial<Board>) => Promise<void>;
+  onBoardStateUpdate?: (updater: (board: Board) => Board) => void;
+  onRefresh?: () => Promise<void>;
+  isOpen?: boolean;
+  onClose?: () => void;
+  currentUser?: Member | null;
 }
 
 export const BoardSettings: React.FC<BoardSettingsProps> = ({
   board,
   onBoardUpdate,
+  onBoardStateUpdate,
+  onRefresh,
+  isOpen: externalIsOpen,
+  onClose: externalOnClose,
+  currentUser,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"details" | "members" | "columns">(
     "details"
   );
 
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const onClose = externalOnClose || (() => setInternalIsOpen(false));
+  const onOpen = () =>
+    externalIsOpen === undefined ? setInternalIsOpen(true) : undefined;
+
+  // Optimistic update functions
+  const handleMembersUpdate = () => {
+    if (onBoardStateUpdate) {
+      // This will be handled by the API calls within MemberManagement
+      // We don't need to do anything here as the MemberManagement component
+      // should handle its own optimistic updates
+    } else if (onRefresh) {
+      onRefresh();
+    }
+  };
+
+  const handleColumnsUpdate = () => {
+    if (onBoardStateUpdate) {
+      // This will be handled by the API calls within ColumnManagement
+      // We don't need to do anything here as the ColumnManagement component
+      // should handle its own optimistic updates
+    } else if (onRefresh) {
+      onRefresh();
+    }
+  };
+
   return (
     <>
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => setIsOpen(true)}
-        className="text-secondary-500 hover:text-secondary-700"
-        title="Board Settings"
-      >
-        <Settings className="h-4 w-4" />
-      </Button>
+      {externalIsOpen === undefined && (
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={onOpen}
+          className="text-secondary-500 hover:text-secondary-700"
+          title="Board Settings"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+      )}
 
-      <Modal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        title="Board Settings"
-        size="lg"
-      >
+      <Modal isOpen={isOpen} onClose={onClose} title="Board Settings" size="lg">
         <div className="space-y-6">
           {/* Board Info */}
           <div className="pb-4 border-b border-secondary-200">
@@ -92,6 +125,7 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
               <BoardDetailsManagement
                 board={board}
                 onBoardUpdate={onBoardUpdate}
+                currentUser={currentUser}
               />
             )}
 
@@ -99,7 +133,8 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
               <MemberManagement
                 boardId={board.id}
                 members={board.members || {}}
-                onMembersUpdate={onBoardUpdate}
+                onMembersUpdate={handleMembersUpdate}
+                onBoardStateUpdate={onBoardStateUpdate}
               />
             )}
 
@@ -107,7 +142,8 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
               <ColumnManagement
                 boardId={board.id}
                 columns={board.columns}
-                onColumnsUpdate={onBoardUpdate}
+                onColumnsUpdate={handleColumnsUpdate}
+                onBoardStateUpdate={onBoardStateUpdate}
               />
             )}
           </div>

@@ -1,37 +1,48 @@
 "use client";
 
 import React, { useState } from "react";
-import { Board } from "@/types/kanban";
+import { Board, Member } from "@/types/kanban";
 import { Button } from "./ui/Button";
 import { Save, Edit3 } from "lucide-react";
 
 interface BoardDetailsManagementProps {
   board: Board;
-  onBoardUpdate: () => void;
+  onBoardUpdate: (boardData: Partial<Board>) => Promise<void>;
+  currentUser?: Member | null;
 }
 
 export const BoardDetailsManagement: React.FC<BoardDetailsManagementProps> = ({
   board,
   onBoardUpdate,
+  currentUser,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(board.title);
   const [description, setDescription] = useState(board.description || "");
   const [loading, setLoading] = useState(false);
 
+  // Check if user can edit board details
+  const canEditBoard = currentUser && (
+    currentUser.role === "admin" || 
+    currentUser.role === "project_manager" ||
+    (board.members && board.members[currentUser.id])
+  );
+
   const handleSave = async () => {
     try {
       setLoading(true);
+
+      const updatedData = {
+        title: title.trim(),
+        description: description.trim(),
+      };
 
       const response = await fetch(`/api/boards/${board.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim(),
-        }),
+        body: JSON.stringify(updatedData),
       });
 
       if (!response.ok) {
@@ -39,7 +50,7 @@ export const BoardDetailsManagement: React.FC<BoardDetailsManagementProps> = ({
       }
 
       setIsEditing(false);
-      onBoardUpdate();
+      await onBoardUpdate(updatedData);
     } catch (error) {
       console.error("Error updating board:", error);
       alert("Failed to update board details");
@@ -60,7 +71,7 @@ export const BoardDetailsManagement: React.FC<BoardDetailsManagementProps> = ({
         <h3 className="text-lg font-semibold text-secondary-900">
           Board Details
         </h3>
-        {!isEditing && (
+        {!isEditing && canEditBoard && (
           <Button
             variant="outline"
             size="sm"

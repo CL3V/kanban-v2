@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Column } from "@/types/kanban";
+import { Column, Board } from "@/types/kanban";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
 import {
@@ -33,6 +33,7 @@ interface ColumnManagementProps {
   boardId: string;
   columns: Column[];
   onColumnsUpdate: () => void;
+  onBoardStateUpdate?: (updater: (board: Board) => Board) => void;
 }
 
 interface SortableColumnItemProps {
@@ -125,6 +126,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
   boardId,
   columns,
   onColumnsUpdate,
+  onBoardStateUpdate,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<Column | null>(null);
@@ -132,6 +134,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
     title: "",
     status: "",
     wipLimit: undefined as number | undefined,
+    color: "#3b82f6" as string,
   });
   const [localColumns, setLocalColumns] = useState(columns);
 
@@ -149,7 +152,12 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
   );
 
   const resetForm = () => {
-    setFormData({ title: "", status: "", wipLimit: undefined });
+    setFormData({
+      title: "",
+      status: "",
+      wipLimit: undefined,
+      color: "#3b82f6",
+    });
     setEditingColumn(null);
   };
 
@@ -187,8 +195,15 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
         throw new Error("Failed to reorder columns");
       }
 
-      // Refresh the board data
-      onColumnsUpdate();
+      // Update board state optimistically or refresh
+      if (onBoardStateUpdate) {
+        onBoardStateUpdate((board) => ({
+          ...board,
+          columns: reorderedColumns,
+        }));
+      } else {
+        onColumnsUpdate();
+      }
     } catch (error) {
       console.error("Error reordering columns:", error);
       // Revert local state on error
@@ -207,6 +222,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
       title: column.title,
       status: column.status,
       wipLimit: column.wipLimit,
+      color: column.color || "#3b82f6",
     });
     setEditingColumn(column);
     setIsModalOpen(true);
@@ -251,9 +267,28 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
         );
       }
 
+      const savedColumn = await response.json();
+
       setIsModalOpen(false);
       resetForm();
-      onColumnsUpdate();
+
+      // Update board state optimistically or refresh
+      if (onBoardStateUpdate) {
+        onBoardStateUpdate((board) => {
+          const updatedColumns = editingColumn
+            ? board.columns.map((col) =>
+                col.id === editingColumn.id ? savedColumn : col
+              )
+            : [...board.columns, savedColumn];
+
+          return {
+            ...board,
+            columns: updatedColumns,
+          };
+        });
+      } else {
+        onColumnsUpdate();
+      }
     } catch (error) {
       console.error("Error saving column:", error);
       alert(
@@ -283,7 +318,15 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
         throw new Error(error.error || "Failed to delete column");
       }
 
-      onColumnsUpdate();
+      // Update board state optimistically or refresh
+      if (onBoardStateUpdate) {
+        onBoardStateUpdate((board) => ({
+          ...board,
+          columns: board.columns.filter((col) => col.id !== columnId),
+        }));
+      } else {
+        onColumnsUpdate();
+      }
     } catch (error) {
       console.error("Error deleting column:", error);
       alert(error instanceof Error ? error.message : "Failed to delete column");
@@ -460,6 +503,77 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
             />
             <p className="text-xs text-secondary-500 mt-1">
               Set a work-in-progress limit to help manage workflow
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-secondary-700 mb-2">
+              Column Color
+            </label>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="color"
+                  value={formData.color}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, color: e.target.value }))
+                  }
+                  className="w-12 h-10 border border-secondary-300 rounded-md cursor-pointer"
+                />
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={formData.color}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        color: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="#3b82f6"
+                    pattern="^#[A-Fa-f0-9]{6}$"
+                  />
+                </div>
+                <div
+                  className="w-10 h-10 rounded-md border border-secondary-300 shadow-sm"
+                  style={{ backgroundColor: formData.color }}
+                />
+              </div>
+              <div className="grid grid-cols-7 gap-2">
+                {[
+                  "#ef4444",
+                  "#f59e0b",
+                  "#eab308",
+                  "#84cc16",
+                  "#22c55e",
+                  "#10b981",
+                  "#06b6d4",
+                  "#3b82f6",
+                  "#6366f1",
+                  "#8b5cf6",
+                  "#a855f7",
+                  "#d946ef",
+                  "#ec4899",
+                  "#f43f5e",
+                ].map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, color }))}
+                    className={`w-8 h-8 rounded-md border-2 transition-all hover:scale-110 ${
+                      formData.color === color
+                        ? "border-gray-800 ring-2 ring-gray-300"
+                        : "border-gray-300 hover:border-gray-400"
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-secondary-500 mt-1">
+              Choose a color to visually identify this column
             </p>
           </div>
 

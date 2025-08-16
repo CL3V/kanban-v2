@@ -53,15 +53,19 @@ export async function POST(
       "#f43f5e",
     ];
 
-    // Pick a color that's not already used
+    // Pick a color that's not already used, or use the provided color
     const usedColors = existingBoard.columns.map((col) => col.color);
     const availableColors = colors.filter(
       (color) => !usedColors.includes(color)
     );
-    const selectedColor =
-      availableColors.length > 0
-        ? availableColors[0]
-        : colors[Math.floor(Math.random() * colors.length)];
+
+    let selectedColor = body.color;
+    if (!selectedColor) {
+      selectedColor =
+        availableColors.length > 0
+          ? availableColors[0]
+          : colors[Math.floor(Math.random() * colors.length)];
+    }
 
     const newColumn: Column = {
       id: columnId,

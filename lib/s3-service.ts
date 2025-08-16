@@ -1,12 +1,12 @@
-import { 
-  GetObjectCommand, 
-  PutObjectCommand, 
-  DeleteObjectCommand, 
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
   ListObjectsV2Command,
-  HeadObjectCommand
-} from '@aws-sdk/client-s3';
-import { s3Client, S3_BUCKET_NAME, S3_KEYS } from './aws-config';
-import type { Board, Task } from '@/types/kanban';
+  HeadObjectCommand,
+} from "@aws-sdk/client-s3";
+import { s3Client, S3_BUCKET_NAME, S3_KEYS } from "./aws-config";
+import type { Board, Task } from "@/types/kanban";
 
 export class S3Service {
   private static async getObject(key: string): Promise<string | null> {
@@ -20,26 +20,40 @@ export class S3Service {
       const body = await response.Body?.transformToString();
       return body || null;
     } catch (error) {
-      if ((error as any)?.name === 'NoSuchKey') {
+      if ((error as any)?.name === "NoSuchKey") {
         return null;
       }
-      console.error('Error getting object from S3:', error);
+      console.error("Error getting object from S3:", error);
       throw error;
     }
   }
 
   private static async putObject(key: string, data: string): Promise<void> {
     try {
+      console.log("S3Service: Preparing to put object:", {
+        bucket: S3_BUCKET_NAME,
+        key,
+        dataLength: data.length,
+      });
+
       const command = new PutObjectCommand({
         Bucket: S3_BUCKET_NAME,
         Key: key,
         Body: data,
-        ContentType: 'application/json',
+        ContentType: "application/json",
       });
 
+      console.log("S3Service: Sending command to S3...");
       await s3Client.send(command);
+      console.log("S3Service: Object put successfully");
     } catch (error) {
-      console.error('Error putting object to S3:', error);
+      console.error("S3Service: Error putting object to S3:", {
+        bucket: S3_BUCKET_NAME,
+        key,
+        error: error instanceof Error ? error.message : String(error),
+        code: (error as any)?.Code,
+        statusCode: (error as any)?.$metadata?.httpStatusCode,
+      });
       throw error;
     }
   }
@@ -53,7 +67,7 @@ export class S3Service {
 
       await s3Client.send(command);
     } catch (error) {
-      console.error('Error deleting object from S3:', error);
+      console.error("Error deleting object from S3:", error);
       throw error;
     }
   }
@@ -68,11 +82,20 @@ export class S3Service {
       await s3Client.send(command);
       return true;
     } catch (error) {
-      if ((error as any)?.name === 'NotFound') {
+      if ((error as any)?.name === "NotFound") {
         return false;
       }
       throw error;
     }
+  }
+
+  // Public utility methods for general object operations
+  static async getObjectData(key: string): Promise<string | null> {
+    return this.getObject(key);
+  }
+
+  static async putObjectData(key: string, data: string): Promise<void> {
+    return this.putObject(key, data);
   }
 
   // Board operations
@@ -95,21 +118,23 @@ export class S3Service {
 
       return boards;
     } catch (error) {
-      console.error('Error getting all boards:', error);
+      console.error("Error getting all boards:", error);
       return [];
     }
   }
 
   static async getBoard(boardId: string): Promise<Board | null> {
     try {
-      const boardData = await this.getObject(`${S3_KEYS.BOARDS}${boardId}.json`);
+      const boardData = await this.getObject(
+        `${S3_KEYS.BOARDS}${boardId}.json`
+      );
       if (!boardData) {
         return null;
       }
 
       return JSON.parse(boardData) as Board;
     } catch (error) {
-      console.error('Error getting board:', error);
+      console.error("Error getting board:", error);
       return null;
     }
   }
@@ -117,27 +142,62 @@ export class S3Service {
   static async createBoard(board: Board): Promise<void> {
     try {
       // Save the board
-      await this.putObject(`${S3_KEYS.BOARDS}${board.id}.json`, JSON.stringify(board));
+      await this.putObject(
+        `${S3_KEYS.BOARDS}${board.id}.json`,
+        JSON.stringify(board)
+      );
 
       // Update board list
       const boardListData = await this.getObject(S3_KEYS.BOARD_LIST);
       const boardIds: string[] = boardListData ? JSON.parse(boardListData) : [];
-      
+
       if (!boardIds.includes(board.id)) {
         boardIds.push(board.id);
         await this.putObject(S3_KEYS.BOARD_LIST, JSON.stringify(boardIds));
       }
     } catch (error) {
-      console.error('Error creating board:', error);
+      console.error("Error creating board:", error);
       throw error;
     }
   }
 
   static async updateBoard(board: Board): Promise<void> {
     try {
-      await this.putObject(`${S3_KEYS.BOARDS}${board.id}.json`, JSON.stringify(board));
+      console.log("S3Service: Updating board with ID:", board.id);
+
+      // Validate board data
+      if (!board.id) {
+        throw new Error("Board ID is required");
+      }
+      if (!board.title) {
+        throw new Error("Board title is required");
+      }
+
+      const boardKey = `${S3_KEYS.BOARDS}${board.id}.json`;
+      console.log("S3Service: Board key:", boardKey);
+
+      // Test JSON serialization
+      let boardData: string;
+      try {
+        boardData = JSON.stringify(board);
+        console.log("S3Service: Board data length:", boardData.length);
+      } catch (jsonError) {
+        console.error("S3Service: JSON serialization error:", jsonError);
+        throw new Error(
+          `Failed to serialize board data: ${
+            jsonError instanceof Error ? jsonError.message : String(jsonError)
+          }`
+        );
+      }
+
+      await this.putObject(boardKey, boardData);
+      console.log("S3Service: Board updated successfully");
     } catch (error) {
-      console.error('Error updating board:', error);
+      console.error("S3Service: Error updating board:", {
+        boardId: board?.id || "unknown",
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       throw error;
     }
   }
@@ -151,11 +211,14 @@ export class S3Service {
       const boardListData = await this.getObject(S3_KEYS.BOARD_LIST);
       if (boardListData) {
         const boardIds: string[] = JSON.parse(boardListData);
-        const updatedBoardIds = boardIds.filter(id => id !== boardId);
-        await this.putObject(S3_KEYS.BOARD_LIST, JSON.stringify(updatedBoardIds));
+        const updatedBoardIds = boardIds.filter((id) => id !== boardId);
+        await this.putObject(
+          S3_KEYS.BOARD_LIST,
+          JSON.stringify(updatedBoardIds)
+        );
       }
     } catch (error) {
-      console.error('Error deleting board:', error);
+      console.error("Error deleting board:", error);
       throw error;
     }
   }
@@ -170,7 +233,7 @@ export class S3Service {
 
       return board.tasks[taskId];
     } catch (error) {
-      console.error('Error getting task:', error);
+      console.error("Error getting task:", error);
       return null;
     }
   }
@@ -186,7 +249,7 @@ export class S3Service {
       board.tasks[task.id] = task;
 
       // Add task to appropriate column
-      const column = board.columns.find(col => col.status === task.status);
+      const column = board.columns.find((col) => col.status === task.status);
       if (column && !column.taskIds.includes(task.id)) {
         column.taskIds.push(task.id);
       }
@@ -195,12 +258,16 @@ export class S3Service {
 
       await this.updateBoard(board);
     } catch (error) {
-      console.error('Error creating task:', error);
+      console.error("Error creating task:", error);
       throw error;
     }
   }
 
-  static async updateTask(boardId: string, taskId: string, updatedTask: Partial<Task>): Promise<void> {
+  static async updateTask(
+    boardId: string,
+    taskId: string,
+    updatedTask: Partial<Task>
+  ): Promise<void> {
     try {
       const board = await this.getBoard(boardId);
       if (!board || !board.tasks[taskId]) {
@@ -209,7 +276,11 @@ export class S3Service {
 
       const currentTask = board.tasks[taskId];
       const oldStatus = currentTask.status;
-      const newTask = { ...currentTask, ...updatedTask, updatedAt: new Date().toISOString() };
+      const newTask = {
+        ...currentTask,
+        ...updatedTask,
+        updatedAt: new Date().toISOString(),
+      };
 
       // Update task in board
       board.tasks[taskId] = newTask;
@@ -217,13 +288,15 @@ export class S3Service {
       // If status changed, move task between columns
       if (updatedTask.status && updatedTask.status !== oldStatus) {
         // Remove from old column
-        const oldColumn = board.columns.find(col => col.status === oldStatus);
+        const oldColumn = board.columns.find((col) => col.status === oldStatus);
         if (oldColumn) {
-          oldColumn.taskIds = oldColumn.taskIds.filter(id => id !== taskId);
+          oldColumn.taskIds = oldColumn.taskIds.filter((id) => id !== taskId);
         }
 
         // Add to new column
-        const newColumn = board.columns.find(col => col.status === updatedTask.status);
+        const newColumn = board.columns.find(
+          (col) => col.status === updatedTask.status
+        );
         if (newColumn && !newColumn.taskIds.includes(taskId)) {
           newColumn.taskIds.push(taskId);
         }
@@ -233,7 +306,7 @@ export class S3Service {
 
       await this.updateBoard(board);
     } catch (error) {
-      console.error('Error updating task:', error);
+      console.error("Error updating task:", error);
       throw error;
     }
   }
@@ -249,20 +322,25 @@ export class S3Service {
       delete board.tasks[taskId];
 
       // Remove task from all columns
-      board.columns.forEach(column => {
-        column.taskIds = column.taskIds.filter(id => id !== taskId);
+      board.columns.forEach((column) => {
+        column.taskIds = column.taskIds.filter((id) => id !== taskId);
       });
 
       board.updatedAt = new Date().toISOString();
 
       await this.updateBoard(board);
     } catch (error) {
-      console.error('Error deleting task:', error);
+      console.error("Error deleting task:", error);
       throw error;
     }
   }
 
-  static async moveTask(boardId: string, taskId: string, newStatus: string, newPosition?: number): Promise<void> {
+  static async moveTask(
+    boardId: string,
+    taskId: string,
+    newStatus: string,
+    newPosition?: number
+  ): Promise<void> {
     try {
       const board = await this.getBoard(boardId);
       if (!board || !board.tasks[taskId]) {
@@ -277,15 +355,15 @@ export class S3Service {
       task.updatedAt = new Date().toISOString();
 
       // Remove from old column
-      const oldColumn = board.columns.find(col => col.status === oldStatus);
+      const oldColumn = board.columns.find((col) => col.status === oldStatus);
       if (oldColumn) {
-        oldColumn.taskIds = oldColumn.taskIds.filter(id => id !== taskId);
+        oldColumn.taskIds = oldColumn.taskIds.filter((id) => id !== taskId);
       }
 
       // Add to new column
-      const newColumn = board.columns.find(col => col.status === newStatus);
+      const newColumn = board.columns.find((col) => col.status === newStatus);
       if (newColumn) {
-        if (typeof newPosition === 'number') {
+        if (typeof newPosition === "number") {
           newColumn.taskIds.splice(newPosition, 0, taskId);
         } else {
           newColumn.taskIds.push(taskId);
@@ -296,7 +374,7 @@ export class S3Service {
 
       await this.updateBoard(board);
     } catch (error) {
-      console.error('Error moving task:', error);
+      console.error("Error moving task:", error);
       throw error;
     }
   }

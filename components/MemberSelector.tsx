@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Member } from "@/types/kanban";
+import { UserAvatar } from "./UserAvatar";
 import { ChevronDown, User, X } from "lucide-react";
 import { Button } from "./ui/Button";
 
@@ -10,6 +11,7 @@ interface MemberSelectorProps {
   selectedMemberId?: string;
   onSelect: (memberId: string | undefined) => void;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 export const MemberSelector: React.FC<MemberSelectorProps> = ({
@@ -17,6 +19,7 @@ export const MemberSelector: React.FC<MemberSelectorProps> = ({
   selectedMemberId,
   onSelect,
   placeholder = "Select a member...",
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selectedMember = selectedMemberId
@@ -30,32 +33,32 @@ export const MemberSelector: React.FC<MemberSelectorProps> = ({
   };
 
   const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(" ")[0].charAt(0).toUpperCase();
   };
 
   return (
     <div className="relative">
       <div
-        className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white flex items-center justify-between cursor-pointer"
-        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent flex items-center justify-between ${
+          disabled
+            ? "border-secondary-200 bg-secondary-50 cursor-not-allowed"
+            : "border-secondary-300 bg-white cursor-pointer"
+        }`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         <div className="flex items-center space-x-2">
           {selectedMember ? (
             <>
-              <div
-                className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                style={{ backgroundColor: selectedMember.color }}
-              >
-                {getInitials(selectedMember.name)}
-              </div>
+              <UserAvatar
+                member={selectedMember}
+                size="xs"
+                showName={false}
+                showRole={false}
+                className=""
+              />
               <span className="text-secondary-900">{selectedMember.name}</span>
               <span className="text-xs text-secondary-500 capitalize">
-                ({selectedMember.role})
+                ({selectedMember.role.replace("_", " ")})
               </span>
             </>
           ) : (
@@ -66,7 +69,7 @@ export const MemberSelector: React.FC<MemberSelectorProps> = ({
           )}
         </div>
         <div className="flex items-center space-x-2">
-          {selectedMember && (
+          {selectedMember && !disabled && (
             <button
               type="button"
               onClick={(e) => {
@@ -82,7 +85,7 @@ export const MemberSelector: React.FC<MemberSelectorProps> = ({
         </div>
       </div>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-secondary-200 rounded-md shadow-lg max-h-60 overflow-auto">
           <div className="py-1">
             <button
@@ -103,18 +106,19 @@ export const MemberSelector: React.FC<MemberSelectorProps> = ({
                   selectedMemberId === member.id ? "bg-primary-50" : ""
                 }`}
               >
-                <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                  style={{ backgroundColor: member.color }}
-                >
-                  {getInitials(member.name)}
-                </div>
+                <UserAvatar
+                  member={member}
+                  size="xs"
+                  showName={false}
+                  showRole={false}
+                  className=""
+                />
                 <div className="flex-1">
                   <div className="font-medium text-secondary-900">
                     {member.name}
                   </div>
                   <div className="text-xs text-secondary-500">
-                    {member.email} • {member.role}
+                    {member.email} • {member.role.replace("_", " ")}
                   </div>
                 </div>
               </button>

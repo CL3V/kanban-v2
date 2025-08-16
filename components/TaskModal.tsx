@@ -6,6 +6,8 @@ import {
   CreateTaskRequest,
   UpdateTaskRequest,
   Member,
+  Column,
+  Comment,
 } from "@/types/kanban";
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
@@ -18,6 +20,9 @@ import {
   FileText,
   Trash2,
   Save,
+  Edit,
+  MessageCircle,
+  Send,
 } from "lucide-react";
 
 interface TaskModalProps {
@@ -25,9 +30,15 @@ interface TaskModalProps {
   onClose: () => void;
   task?: Task;
   members: { [memberId: string]: Member };
+  columns: Column[];
+  defaultStatus?: TaskStatus;
   onSave: (taskData: CreateTaskRequest | UpdateTaskRequest) => void;
   onDelete?: () => void;
   isEditing?: boolean;
+  onEdit?: () => void;
+  currentUser?: Member;
+  onAddComment?: (taskId: string, content: string) => Promise<void>;
+  onDeleteComment?: (taskId: string, commentId: string) => Promise<void>;
 }
 
 export const TaskModal: React.FC<TaskModalProps> = ({
@@ -35,9 +46,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   onClose,
   task,
   members,
+  columns,
+  defaultStatus,
   onSave,
   onDelete,
   isEditing = false,
+  onEdit,
+  currentUser,
+  onAddComment,
+  onDeleteComment,
 }) => {
   const [formData, setFormData] = useState<
     CreateTaskRequest | UpdateTaskRequest
@@ -52,6 +69,44 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   });
 
   const [tagInput, setTagInput] = useState("");
+  const [newComment, setNewComment] = useState("");
+
+  // Helper function to get initials from a name
+  const getInitials = (name: string): string => {
+    const words = name.split(" ").filter((word) => word.length > 0);
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return words[0]?.substring(0, 2).toUpperCase() || "UN";
+  };
+
+  // Helper function to generate avatar color based on name
+  const getAvatarColor = (name: string): string => {
+    const colors = [
+      "#FF6B35",
+      "#F7931E",
+      "#FFD23F",
+      "#A8E6CF",
+      "#88D8B0",
+      "#3B82F6",
+      "#8B5CF6",
+      "#EC4899",
+      "#EF4444",
+      "#10B981",
+      "#F59E0B",
+      "#8B5CF6",
+      "#06B6D4",
+      "#84CC16",
+      "#F97316",
+    ];
+
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   useEffect(() => {
     if (task) {
@@ -74,9 +129,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         dueDate: "",
         tags: [],
         estimatedHours: undefined,
+        ...(defaultStatus && { status: defaultStatus }),
       });
     }
-  }, [task, isEditing]);
+  }, [task, isEditing, defaultStatus]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +140,29 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
     onSave(formData);
     onClose();
+  };
+
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !task || !currentUser || !onAddComment) return;
+
+    try {
+      await onAddComment(task.id, newComment.trim());
+      setNewComment("");
+    } catch (error) {
+      console.error("Error adding comment:", error);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!task || !currentUser || !onDeleteComment) return;
+
+    if (!confirm("Are you sure you want to delete this comment?")) return;
+
+    try {
+      await onDeleteComment(task.id, commentId);
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+    }
   };
 
   const handleAddTag = () => {
@@ -136,8 +215,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             onChange={(e) =>
               setFormData((prev) => ({ ...prev, title: e.target.value }))
             }
-            className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+              isEditing || !task
+                ? "border-secondary-300 bg-white"
+                : "border-secondary-200 bg-secondary-50"
+            }`}
             placeholder="Enter task title..."
+            readOnly={!isEditing && !!task}
             required
           />
         </div>
@@ -157,8 +241,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               setFormData((prev) => ({ ...prev, description: e.target.value }))
             }
             rows={3}
-            className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+              isEditing || !task
+                ? "border-secondary-300 bg-white"
+                : "border-secondary-200 bg-secondary-50"
+            }`}
             placeholder="Enter task description..."
+            readOnly={!isEditing && !!task}
           />
         </div>
 
@@ -180,7 +269,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   priority: e.target.value as TaskPriority,
                 }))
               }
-              className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                isEditing || !task
+                  ? "border-secondary-300 bg-white"
+                  : "border-secondary-200 bg-secondary-50"
+              }`}
+              disabled={!isEditing && !!task}
             >
               <option value="low">🟢 Low</option>
               <option value="medium">🟡 Medium</option>
@@ -189,7 +283,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </select>
           </div>
 
-          {isEditing && "status" in formData && (
+          {((isEditing && "status" in formData) ||
+            (!task && defaultStatus)) && (
             <div>
               <label
                 htmlFor="status"
@@ -199,19 +294,27 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </label>
               <select
                 id="status"
-                value={formData.status}
+                value={
+                  (formData as UpdateTaskRequest).status || defaultStatus || ""
+                }
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
                     status: e.target.value as TaskStatus,
                   }))
                 }
-                className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                  isEditing || !task
+                    ? "border-secondary-300 bg-white"
+                    : "border-secondary-200 bg-secondary-50"
+                }`}
+                disabled={!isEditing && !!task}
               >
-                <option value="backlog">📋 Backlog</option>
-                <option value="in-development">⚙️ In Development</option>
-                <option value="code-review">👀 Code Review</option>
-                <option value="deployed">✅ Deployed</option>
+                {columns.map((column) => (
+                  <option key={column.id} value={column.status}>
+                    {column.title}
+                  </option>
+                ))}
               </select>
             </div>
           )}
@@ -228,9 +331,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               members={members}
               selectedMemberId={formData.assignee}
               onSelect={(memberId) =>
-                setFormData((prev) => ({ ...prev, assignee: memberId || "" }))
+                isEditing || !task
+                  ? setFormData((prev) => ({
+                      ...prev,
+                      assignee: memberId || "",
+                    }))
+                  : undefined
               }
               placeholder="Select team member..."
+              disabled={!isEditing && !!task}
             />
           </div>
 
@@ -249,7 +358,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, dueDate: e.target.value }))
               }
-              className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                isEditing || !task
+                  ? "border-secondary-300 bg-white"
+                  : "border-secondary-200 bg-secondary-50"
+              }`}
+              readOnly={!isEditing && !!task}
             />
           </div>
         </div>
@@ -275,8 +389,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   : undefined,
               }))
             }
-            className="w-full px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+              isEditing || !task
+                ? "border-secondary-300 bg-white"
+                : "border-secondary-200 bg-secondary-50"
+            }`}
             placeholder="Enter estimated hours..."
+            readOnly={!isEditing && !!task}
             min="0"
             step="0.5"
           />
@@ -295,34 +414,38 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 className="inline-flex items-center px-2 py-1 bg-primary-100 text-primary-700 text-sm rounded-md"
               >
                 {tag}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTag(tag)}
-                  className="ml-1 text-primary-500 hover:text-primary-700"
-                >
-                  ×
-                </button>
+                {(isEditing || !task) && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tag)}
+                    className="ml-1 text-primary-500 hover:text-primary-700"
+                  >
+                    ×
+                  </button>
+                )}
               </span>
             ))}
           </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="flex-1 px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Add a tag..."
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleAddTag}
-              disabled={!tagInput.trim()}
-            >
-              Add
-            </Button>
-          </div>
+          {(isEditing || !task) && (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="flex-1 px-3 py-2 border border-secondary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Add a tag..."
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddTag}
+                disabled={!tagInput.trim()}
+              >
+                Add
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Task Metadata (for existing tasks) */}
@@ -347,6 +470,136 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </div>
         )}
 
+        {/* Comments Section - Only show for existing tasks */}
+        {task && (
+          <div className="border-t border-secondary-200 pt-4">
+            <div className="flex items-center gap-2 mb-4">
+              <MessageCircle className="h-4 w-4 text-secondary-600" />
+              <h3 className="text-sm font-medium text-secondary-700">
+                Comments ({task.comments?.length || 0})
+              </h3>
+            </div>
+
+            {/* Comments List */}
+            <div className="space-y-3 mb-4 max-h-40 overflow-y-auto">
+              {task.comments && task.comments.length > 0 ? (
+                task.comments.map((comment) => {
+                  const author = members[comment.author] || {
+                    name: "Unknown User",
+                    id: comment.author,
+                  };
+                  return (
+                    <div
+                      key={comment.id}
+                      className="flex gap-3 p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0"
+                        style={{ backgroundColor: getAvatarColor(author.name) }}
+                      >
+                        {author.avatar ? (
+                          <img
+                            src={author.avatar}
+                            alt={author.name}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <span>{getInitials(author.name)}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900">
+                              {author.name}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(comment.createdAt).toLocaleDateString()}{" "}
+                              at{" "}
+                              {new Date(comment.createdAt).toLocaleTimeString(
+                                [],
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )}
+                            </span>
+                          </div>
+                          {/* Delete button - only show for comment author or admin */}
+                          {currentUser &&
+                            (comment.author === currentUser.id ||
+                              currentUser.role === "admin") &&
+                            onDeleteComment && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            )}
+                        </div>
+                        <p className="text-sm text-gray-700 break-words">
+                          {comment.content}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  No comments yet. Be the first to add one!
+                </p>
+              )}
+            </div>
+
+            {/* Add Comment */}
+            {currentUser && onAddComment && (
+              <div className="flex gap-3">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0"
+                  style={{ backgroundColor: getAvatarColor(currentUser.name) }}
+                >
+                  {currentUser.avatar ? (
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <span>{getInitials(currentUser.name)}</span>
+                  )}
+                </div>
+                <div className="flex-1 flex gap-2">
+                  <input
+                    type="text"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAddComment();
+                      }
+                    }}
+                    placeholder="Add a comment..."
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim()}
+                    size="sm"
+                    className="px-3"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex justify-between pt-4 border-t border-secondary-200">
           <div>
@@ -367,14 +620,37 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              className="flex items-center gap-2"
-              disabled={!formData.title?.trim()}
-            >
-              <Save className="h-4 w-4" />
-              {task ? "Update" : "Create"} Task
-            </Button>
+            {task && !isEditing && onEdit && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onEdit}
+                className="flex items-center gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                Edit
+              </Button>
+            )}
+            {isEditing && (
+              <Button
+                type="submit"
+                className="flex items-center gap-2"
+                disabled={!formData.title?.trim()}
+              >
+                <Save className="h-4 w-4" />
+                {task ? "Update" : "Create"} Task
+              </Button>
+            )}
+            {!task && (
+              <Button
+                type="submit"
+                className="flex items-center gap-2"
+                disabled={!formData.title?.trim()}
+              >
+                <Save className="h-4 w-4" />
+                Create Task
+              </Button>
+            )}
           </div>
         </div>
       </form>

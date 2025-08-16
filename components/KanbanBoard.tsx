@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
-  Board,
-  Task,
   CreateTaskRequest,
   UpdateTaskRequest,
   TaskStatus,
+  Task,
 } from "@/types/kanban";
+import { Button } from "./ui/Button";
 import { Column } from "./Column";
 import { TaskModal } from "./TaskModal";
-import { Button } from "./ui/Button";
 import { BoardSettings } from "./BoardSettings";
-import { Settings, Plus } from "lucide-react";
+import { BoardHeader, TaskFilters } from "./BoardHeader";
+import { BoardStats } from "./BoardStats";
 import {
   DndContext,
   DragEndEvent,
@@ -21,26 +21,60 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  closestCenter,
+  rectIntersection,
+  pointerWithin,
+  getFirstCollision,
 } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
 import { TaskCard } from "./TaskCard";
+import { useBoard } from "@/hooks/useBoard";
+import { PermissionService } from "@/lib/PermissionService";
+import { useModalState } from "@/hooks/useModalState";
+import { useColumnData } from "@/hooks/useColumnData";
+import { Member } from "@/types/kanban";
 
 interface KanbanBoardProps {
   boardId: string;
+  currentUser?: Member;
 }
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
-  const [board, setBoard] = useState<Board | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [modalMode, setModalMode] = useState<"create" | "view" | "edit">(
-    "create"
-  );
-  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({
+  boardId,
+  currentUser,
+}) => {
+  const {
+    board,
+    loading,
+    error,
+    fetchBoard,
+    createTask,
+    updateTask,
+    deleteTask,
+    moveTask,
+    updateBoard,
+    updateBoardState,
+  } = useBoard(boardId);
+
+  const {
+    mode,
+    isTaskModalOpen,
+    isBoardSettingsOpen,
+    selectedTask,
+    activeColumnStatus,
+    isEditing,
+    isCreating,
+    openCreateTask,
+    openViewTask,
+    openEditTask,
+    switchToEdit,
+    openBoardSettings,
+    closeModal,
+  } = useModalState();
+
+  const columnData = useColumnData(board);
+  const [activeTask, setActiveTask] = React.useState<Task | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState<TaskFilters>({});
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -50,328 +84,426 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
     })
   );
 
-  // Fetch board data
-  useEffect(() => {
-    fetchBoard();
-  }, [boardId]);
-
-  const fetchBoard = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/boards/${boardId}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch board");
-      }
-      const boardData = await response.json();
-      setBoard(boardData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch board");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateTask = async (taskData: CreateTaskRequest) => {
-    try {
-      const response = await fetch(`/api/boards/${boardId}/tasks`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(taskData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create task");
+  const handleCreateTask = useCallback(
+    async (taskData: CreateTaskRequest) => {
+      if (!currentUser || !PermissionService.canCreateTask(currentUser)) {
+        alert("You don't have permission to create tasks");
+        return;
       }
 
-      const newTask = await response.json();
+      try {
+        await createTask(taskData);
+        closeModal();
+      } catch (err) {
+        console.error("Error creating task:", err);
+        alert("Failed to create task");
+      }
+    },
+    [createTask, closeModal, currentUser]
+  );
 
-      // Optimistic update - add task to board immediately
-      if (board) {
-        const updatedBoard = { ...board };
-        updatedBoard.tasks[newTask.id] = newTask;
+  const handleUpdateTask = useCallback(
+    async (taskId: string, taskData: UpdateTaskRequest) => {
+      if (!currentUser || !PermissionService.canEditTask(currentUser)) {
+        alert("You don't have permission to edit tasks");
+        return;
+      }
 
-        // Add task to appropriate column
-        const column = updatedBoard.columns.find(
-          (col) => col.status === newTask.status
-        );
-        if (column) {
-          column.taskIds.push(newTask.id);
+      try {
+        await updateTask(taskId, taskData);
+        closeModal();
+      } catch (err) {
+        console.error("Error updating task:", err);
+        alert("Failed to update task");
+      }
+    },
+    [updateTask, closeModal, currentUser]
+  );
+
+  const handleDeleteTask = useCallback(
+    async (taskId: string) => {
+      if (!currentUser || !PermissionService.canDeleteTask(currentUser)) {
+        alert("You don't have permission to delete tasks");
+        return;
+      }
+
+      if (!confirm("Are you sure you want to delete this task?")) return;
+
+      try {
+        await deleteTask(taskId);
+        closeModal();
+      } catch (err) {
+        console.error("Error deleting task:", err);
+        alert("Failed to delete task");
+      }
+    },
+    [deleteTask, closeModal, currentUser]
+  );
+
+  const handleMoveTask = useCallback(
+    async (taskId: string, newStatus: TaskStatus, newPosition?: number) => {
+      try {
+        await moveTask(taskId, newStatus, newPosition);
+      } catch (err) {
+        console.error("Error moving task:", err);
+        alert("Failed to move task");
+      }
+    },
+    [moveTask]
+  );
+
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event;
+      const task = board?.tasks[active.id as string];
+      if (task) {
+        setActiveTask(task);
+      }
+    },
+    [board]
+  );
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveTask(null);
+
+      if (!over || !board) return;
+
+      const taskId = active.id as string;
+      const task = board.tasks[taskId];
+      if (!task) return;
+
+      // Find the target column - check if over.id is a column first
+      let targetColumn = board.columns.find((col) => col.id === over.id);
+
+      // If not found directly, it might be a task - find its column
+      if (!targetColumn) {
+        const overTask = board.tasks[over.id as string];
+        if (overTask) {
+          targetColumn = board.columns.find(
+            (col) => col.status === overTask.status
+          );
         }
-
-        setBoard(updatedBoard);
-      }
-    } catch (err) {
-      console.error("Error creating task:", err);
-      alert("Failed to create task");
-    }
-  };
-
-  const handleUpdateTask = async (
-    taskId: string,
-    taskData: UpdateTaskRequest
-  ) => {
-    try {
-      const response = await fetch(`/api/boards/${boardId}/tasks/${taskId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(taskData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update task");
       }
 
-      await fetchBoard(); // Refresh board data
-    } catch (err) {
-      console.error("Error updating task:", err);
-      alert("Failed to update task");
-    }
-  };
+      if (!targetColumn) return;
 
-  const handleDeleteTask = async (taskId: string) => {
-    if (!confirm("Are you sure you want to delete this task?")) return;
-
-    try {
-      const response = await fetch(`/api/boards/${boardId}/tasks/${taskId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete task");
-      }
-
-      await fetchBoard(); // Refresh board data
-      setIsTaskModalOpen(false);
-      setSelectedTask(null);
-    } catch (err) {
-      console.error("Error deleting task:", err);
-      alert("Failed to delete task");
-    }
-  };
-
-  const handleMoveTask = async (
-    taskId: string,
-    newStatus: TaskStatus,
-    newPosition?: number
-  ) => {
-    if (!board) return;
-
-    // Optimistic update - update UI immediately
-    const updatedBoard = { ...board };
-    const task = updatedBoard.tasks[taskId];
-
-    if (!task) return;
-
-    const oldStatus = task.status;
-
-    // Remove task from old column
-    const oldColumn = updatedBoard.columns.find(
-      (col) => col.status === oldStatus
-    );
-    if (oldColumn) {
-      oldColumn.taskIds = oldColumn.taskIds.filter((id) => id !== taskId);
-    }
-
-    // Add task to new column
-    const newColumn = updatedBoard.columns.find(
-      (col) => col.status === newStatus
-    );
-    if (newColumn) {
-      newColumn.taskIds.push(taskId);
-    }
-
-    // Update task status
-    task.status = newStatus;
-    task.updatedAt = new Date().toISOString();
-
-    // Update board immediately (optimistic)
-    setBoard(updatedBoard);
-
-    try {
-      const response = await fetch(
-        `/api/boards/${boardId}/tasks/${taskId}/move`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ newStatus, newPosition }),
-        }
+      // If the task is already in the target column, we might just be reordering
+      const sourceColumn = board.columns.find(
+        (col) => col.status === task.status
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to move task");
+      if (sourceColumn?.id === targetColumn.id) {
+        // Reordering within the same column - not implemented in this basic version
+        return;
       }
-      // Don't fetch board on success - we already updated optimistically
-    } catch (err) {
-      console.error("Error moving task:", err);
-      // Revert optimistic update on error
-      await fetchBoard();
-      alert("Failed to move task");
+
+      // Check WIP limit before moving
+      const targetColumnTasks = targetColumn.taskIds
+        .map((id) => board.tasks[id])
+        .filter(Boolean);
+
+      // Don't count the task being moved if it's already in the target column
+      const currentTaskCount = targetColumnTasks.filter(
+        (t) => t.id !== taskId
+      ).length;
+
+      const willExceedWipLimit =
+        targetColumn.wipLimit && currentTaskCount >= targetColumn.wipLimit;
+
+      // Show warning if WIP limit will be exceeded, but still allow the move
+      if (willExceedWipLimit) {
+        const confirmed = confirm(
+          `Moving this task will exceed the WIP limit for "${
+            targetColumn.title
+          }" (${currentTaskCount + 1}/${
+            targetColumn.wipLimit
+          }). Continue anyway?`
+        );
+
+        if (!confirmed) {
+          return; // Cancel the move if user doesn't confirm
+        }
+      }
+
+      // Move task to new column
+      if (task.status !== targetColumn.status) {
+        await handleMoveTask(taskId, targetColumn.status);
+      }
+    },
+    [board, handleMoveTask]
+  );
+
+  const handleTaskSave = useCallback(
+    async (taskData: CreateTaskRequest | UpdateTaskRequest) => {
+      if (isCreating) {
+        await handleCreateTask(taskData as CreateTaskRequest);
+      } else if (isEditing && selectedTask) {
+        await handleUpdateTask(selectedTask.id, taskData as UpdateTaskRequest);
+      }
+    },
+    [isCreating, isEditing, selectedTask, handleCreateTask, handleUpdateTask]
+  );
+
+  // Filter tasks based on search and filters
+  const filteredColumnData = useMemo(() => {
+    if (!board) return [];
+
+    return columnData.map(({ column, tasks }) => {
+      const filteredTasks = tasks.filter((task) => {
+        // Search filter
+        if (searchTerm) {
+          const searchLower = searchTerm.toLowerCase();
+          const matchesSearch =
+            task.title.toLowerCase().includes(searchLower) ||
+            task.description?.toLowerCase().includes(searchLower) ||
+            task.tags?.some((tag) => tag.toLowerCase().includes(searchLower));
+
+          if (!matchesSearch) return false;
+        }
+
+        // Assignee filter
+        if (filters.assignee && task.assignee !== filters.assignee) {
+          return false;
+        }
+
+        // Priority filter
+        if (filters.priority && task.priority !== filters.priority) {
+          return false;
+        }
+
+        // Tags filter
+        if (filters.tags && filters.tags.length > 0) {
+          const hasMatchingTag = filters.tags.some((filterTag) =>
+            task.tags?.some(
+              (taskTag) => taskTag.toLowerCase() === filterTag.toLowerCase()
+            )
+          );
+          if (!hasMatchingTag) return false;
+        }
+
+        return true;
+      });
+
+      return { column, tasks: filteredTasks };
+    });
+  }, [columnData, searchTerm, filters, board]);
+
+  const handleSearchChange = useCallback((term: string) => {
+    setSearchTerm(term);
+  }, []);
+
+  const handleFiltersChange = useCallback((newFilters: TaskFilters) => {
+    setFilters(newFilters);
+  }, []);
+
+  const handleAddComment = useCallback(
+    async (taskId: string, content: string) => {
+      if (!currentUser || !board) return;
+
+      try {
+        const response = await fetch(
+          `/api/boards/${boardId}/tasks/${taskId}/comments`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              content,
+              author: currentUser.id,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("API Error Response:", errorData);
+          throw new Error(
+            errorData.details || errorData.error || "Failed to add comment"
+          );
+        }
+
+        // Get the new comment from response
+        const newComment = await response.json();
+
+        // Update the task with the new comment using optimistic update
+        updateBoardState((prevBoard) => {
+          const updatedBoard = { ...prevBoard };
+          const task = updatedBoard.tasks[taskId];
+
+          if (task) {
+            // Check if comment already exists to prevent duplicates
+            const commentExists = task.comments?.some(
+              (comment) => comment.id === newComment.id
+            );
+
+            if (!commentExists) {
+              updatedBoard.tasks[taskId] = {
+                ...task,
+                comments: [...(task.comments || []), newComment],
+              };
+            }
+          }
+
+          return updatedBoard;
+        });
+      } catch (error) {
+        console.error("Error adding comment:", error);
+        alert("Failed to add comment");
+      }
+    },
+    [boardId, currentUser, board, updateBoardState]
+  );
+
+  const handleDeleteComment = useCallback(
+    async (taskId: string, commentId: string) => {
+      if (!currentUser || !board) return;
+
+      try {
+        const response = await fetch(
+          `/api/boards/${boardId}/tasks/${taskId}/comments?commentId=${commentId}`,
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("API Error Response:", errorData);
+          throw new Error(
+            errorData.details || errorData.error || "Failed to delete comment"
+          );
+        }
+
+        // Update the task by removing the comment using optimistic update
+        updateBoardState((prevBoard) => {
+          const updatedBoard = { ...prevBoard };
+          const task = updatedBoard.tasks[taskId];
+
+          if (task && task.comments) {
+            updatedBoard.tasks[taskId] = {
+              ...task,
+              comments: task.comments.filter(
+                (comment) => comment.id !== commentId
+              ),
+            };
+          }
+
+          return updatedBoard;
+        });
+      } catch (error) {
+        console.error("Error deleting comment:", error);
+        alert("Failed to delete comment");
+      }
+    },
+    [boardId, currentUser, board, updateBoardState]
+  );
+
+  // Custom collision detection that prioritizes column drop zones
+  const customCollisionDetection = useCallback(
+    (args: any) => {
+      // First, try to find collisions with columns
+      const columnCollisions = rectIntersection({
+        ...args,
+        droppableContainers: args.droppableContainers.filter((container: any) =>
+          board?.columns.some((col) => col.id === container.id)
+        ),
+      });
+
+      if (columnCollisions.length > 0) {
+        return columnCollisions;
+      }
+
+      // Fallback to default collision detection
+      return rectIntersection(args);
+    },
+    [board]
+  );
+
+  const renderContent = useMemo(() => {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        </div>
+      );
     }
-  };
 
-  const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const task = board?.tasks[active.id as string];
-    if (task) {
-      setActiveTask(task);
-    }
-  };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveTask(null);
-
-    if (!over || !board) return;
-
-    const taskId = active.id as string;
-    const task = board.tasks[taskId];
-    if (!task) return;
-
-    // Find the target column
-    const targetColumn = board.columns.find((col) => col.id === over.id);
-    if (!targetColumn) return;
-
-    // If the task is already in the target column, we might just be reordering
-    const sourceColumn = board.columns.find(
-      (col) => col.status === task.status
-    );
-
-    if (sourceColumn?.id === targetColumn.id) {
-      // Reordering within the same column - not implemented in this basic version
-      return;
+    if (error) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      );
     }
 
-    // Move task to new column
-    if (task.status !== targetColumn.status) {
-      await handleMoveTask(taskId, targetColumn.status);
+    if (!board) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-secondary-600">Board not found</p>
+        </div>
+      );
     }
-  };
 
-  const openCreateTaskModal = (columnStatus: TaskStatus) => {
-    setActiveColumnId(null);
-    setSelectedTask(null);
-    setModalMode("create");
-    setIsTaskModalOpen(true);
-  };
+    return null;
+  }, [loading, error, board]);
 
-  const openTaskModal = (task: Task, mode: "view" | "edit" = "view") => {
-    setSelectedTask(task);
-    setModalMode(mode);
-    setIsTaskModalOpen(true);
-  };
-
-  const closeTaskModal = () => {
-    setIsTaskModalOpen(false);
-    setSelectedTask(null);
-    setActiveColumnId(null);
-  };
-
-  const handleTaskSave = async (
-    taskData: CreateTaskRequest | UpdateTaskRequest
-  ) => {
-    if (modalMode === "create") {
-      await handleCreateTask(taskData as CreateTaskRequest);
-    } else if (modalMode === "edit" && selectedTask) {
-      await handleUpdateTask(selectedTask.id, taskData as UpdateTaskRequest);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-red-600 mb-4">{error}</p>
-        <Button onClick={fetchBoard}>Retry</Button>
-      </div>
-    );
-  }
-
-  if (!board) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-secondary-600">Board not found</p>
-      </div>
-    );
+  if (renderContent) {
+    return renderContent;
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col h-screen">
       {/* Board Header */}
-      <div className="bg-white border-b border-secondary-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold text-secondary-900 truncate">
-                {board.title}
-              </h1>
-              {board.description && (
-                <p className="text-secondary-600 mt-1 text-sm line-clamp-2">
-                  {board.description}
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center space-x-3 flex-shrink-0">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  openCreateTaskModal(board.columns[0]?.status || "backlog")
-                }
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Task
-              </Button>
-
-              <BoardSettings board={board} onBoardUpdate={fetchBoard} />
-            </div>
-          </div>
-        </div>
-      </div>
+      <BoardHeader
+        board={board!}
+        onUpdateBoard={updateBoard}
+        onOpenCreateTask={() =>
+          openCreateTask(board!.columns[0]?.status || "todo")
+        }
+        onOpenBoardSettings={openBoardSettings}
+        onSearchChange={handleSearchChange}
+        onFiltersChange={handleFiltersChange}
+        canCreateTask={
+          currentUser ? PermissionService.canCreateTask(currentUser) : false
+        }
+        canManageBoard={
+          currentUser
+            ? PermissionService.canManageProjectMembers(currentUser)
+            : false
+        }
+      />
 
       {/* Kanban Board */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={customCollisionDetection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="max-w-full overflow-x-auto">
-          <div className="flex gap-6 p-6 min-w-max">
-            {board.columns.map((column) => {
-              const columnTasks = column.taskIds
-                .map((taskId) => board.tasks[taskId])
-                .filter(Boolean)
-                .sort(
-                  (a, b) =>
-                    new Date(b.createdAt).getTime() -
-                    new Date(a.createdAt).getTime()
-                );
-
-              return (
-                <Column
-                  key={column.id}
-                  column={column}
-                  tasks={columnTasks}
-                  members={board.members}
-                  onAddTask={() => openCreateTaskModal(column.status)}
-                  onTaskClick={(task) => openTaskModal(task)}
-                />
-              );
-            })}
+        <div className="flex-1 overflow-x-auto bg-gray-50">
+          <div className="flex gap-4 p-6 h-full min-w-max">
+            {filteredColumnData.map(({ column, tasks }) => (
+              <Column
+                key={column.id}
+                column={column}
+                tasks={tasks}
+                members={board!.members}
+                onAddTask={() => openCreateTask(column.status)}
+                onTaskClick={openViewTask}
+                canAddTask={
+                  currentUser
+                    ? PermissionService.canCreateTask(currentUser)
+                    : false
+                }
+              />
+            ))}
           </div>
         </div>
 
@@ -385,14 +517,34 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId }) => {
       {/* Task Modal */}
       <TaskModal
         isOpen={isTaskModalOpen}
-        onClose={closeTaskModal}
-        task={selectedTask || undefined}
+        onClose={closeModal}
+        task={
+          selectedTask && board?.tasks[selectedTask.id]
+            ? board.tasks[selectedTask.id]
+            : selectedTask || undefined
+        }
         members={board?.members || {}}
+        columns={board?.columns || []}
+        defaultStatus={isCreating ? activeColumnStatus || undefined : undefined}
         onSave={handleTaskSave}
         onDelete={
           selectedTask ? () => handleDeleteTask(selectedTask.id) : undefined
         }
-        isEditing={modalMode === "edit"}
+        isEditing={isEditing}
+        onEdit={switchToEdit}
+        currentUser={currentUser}
+        onAddComment={handleAddComment}
+        onDeleteComment={handleDeleteComment}
+      />
+
+      {/* Board Settings Modal */}
+      <BoardSettings
+        board={board!}
+        onBoardUpdate={updateBoard}
+        onBoardStateUpdate={updateBoardState}
+        isOpen={isBoardSettingsOpen}
+        onClose={closeModal}
+        currentUser={currentUser}
       />
     </div>
   );

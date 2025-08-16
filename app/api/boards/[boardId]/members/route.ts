@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { S3Service } from "@/lib/s3-service";
+import { MemberService } from "@/lib/member-service";
 import { Member } from "@/types/kanban";
 import { v4 as uuidv4 } from "uuid";
 
@@ -11,17 +12,51 @@ export async function POST(
     const { boardId } = await params;
     const body = await request.json();
 
+    // Verify board exists
+    const existingBoard = await S3Service.getBoard(boardId);
+    if (!existingBoard) {
+      return NextResponse.json({ error: "Board not found" }, { status: 404 });
+    }
+
+    // Check if we're adding an existing member by ID
+    if (body.memberId) {
+      // Adding existing global member to board
+      const globalMembers = await MemberService.getAllMembers();
+      const member = globalMembers.find((m: Member) => m.id === body.memberId);
+
+      if (!member) {
+        return NextResponse.json(
+          { error: "Member not found" },
+          { status: 404 }
+        );
+      }
+
+      // Check if member is already in the board
+      if (existingBoard.members && existingBoard.members[body.memberId]) {
+        return NextResponse.json(
+          { error: "Member is already in this board" },
+          { status: 400 }
+        );
+      }
+
+      // Add member to board
+      if (!existingBoard.members) {
+        existingBoard.members = {};
+      }
+      existingBoard.members[body.memberId] = member;
+      existingBoard.updatedAt = new Date().toISOString();
+
+      await S3Service.updateBoard(existingBoard);
+
+      return NextResponse.json(member, { status: 201 });
+    }
+
+    // Creating new member (existing functionality)
     if (!body.name || !body.email) {
       return NextResponse.json(
         { error: "Name and email are required" },
         { status: 400 }
       );
-    }
-
-    // Verify board exists
-    const existingBoard = await S3Service.getBoard(boardId);
-    if (!existingBoard) {
-      return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
     const memberId = uuidv4();
