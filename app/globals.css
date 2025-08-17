@@ -275,4 +275,27 @@
     border-radius: 9999px;
   }
   /* hover state inherits from global scrollbar styles */
+
+  /* Draft.js Editor Custom Styles */
+  .rdw-editor-toolbar {
+    border-bottom: 1px solid #e5e7eb !important;
+    margin-bottom: 0 !important;
+    padding: 8px !important;
+  }
+
+  .rdw-editor-main {
+    padding: 12px !important;
+    min-height: 100px !important;
+  }
+
+  .rdw-dropdown-wrapper,
+  .rdw-option-wrapper {
+    border: 1px solid #e5e7eb !important;
+    margin: 0 2px !important;
+  }
+
+  .rdw-dropdown-wrapper:hover,
+  .rdw-option-wrapper:hover {
+    background-color: #f3f4f6 !important;
+  }
 }

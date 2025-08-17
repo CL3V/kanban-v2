@@ -12,6 +12,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export interface TaskFilters {
   assignee?: string;
@@ -157,6 +158,15 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
+
+            <Image
+              src="/images/logo.png"
+              alt="App Logo"
+              width={28}
+              height={28}
+              className="rounded-sm"
+              priority
+            />
 
             <div>
               <h1 className="text-xl font-semibold text-gray-900">

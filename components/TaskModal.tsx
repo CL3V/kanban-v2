@@ -12,6 +12,7 @@ import {
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
 import { MemberSelector } from "./MemberSelector";
+import { RichTextEditor, getPlainTextFromDraftState } from "./RichTextEditor";
 import {
   Calendar,
   Clock,
@@ -287,20 +288,18 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           >
             Description
           </label>
-          <textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, description: e.target.value }))
+          <RichTextEditor
+            value={formData.description || ""}
+            onChange={(value) =>
+              setFormData((prev) => ({ ...prev, description: value }))
             }
-            rows={3}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-              isEditing || !task
-                ? "border-secondary-300 bg-white"
-                : "border-secondary-200 bg-secondary-50"
-            }`}
             placeholder="Enter task description..."
             readOnly={!isEditing && !!task}
+            className={`${
+              isEditing || !task
+                ? "border-secondary-300"
+                : "border-secondary-200 bg-secondary-50"
+            }`}
           />
         </div>
 

@@ -9,6 +9,17 @@ export const metadata: Metadata = {
   description:
     "A powerful Kanban board application for managing projects and tasks for Core Team",
   keywords: ["kanban", "project management", "tasks", "productivity", "agile"],
+  icons: {
+    icon: "/images/logo.png",
+    shortcut: "/images/logo.png",
+    apple: "/images/logo.png",
+  },
+  openGraph: {
+    images: ["/images/logo.png"],
+  },
+  twitter: {
+    images: ["/images/logo.png"],
+  },
 };
 
 export default function RootLayout({
