@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { UserSelector } from "@/components/UserSelector";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -109,9 +110,14 @@ export default function HomePage() {
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white grid place-items-center font-bold">
-              K
-            </div>
+            <Image
+              src="/images/logo.png"
+              alt="App Logo"
+              width={28}
+              height={28}
+              className="rounded-sm"
+              priority
+            />
             <h1 className="text-sm sm:text-base font-semibold text-gray-900">
               Dashboard
             </h1>
