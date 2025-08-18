@@ -85,6 +85,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [scrollContainerRef, setScrollContainerRef] =
     useState<HTMLDivElement | null>(null);
   const [topScrollRef, setTopScrollRef] = useState<HTMLDivElement | null>(null);
+  const [needsHorizontalScroll, setNeedsHorizontalScroll] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -459,6 +460,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [board]
   );
 
+  // Check if horizontal scrolling is needed
+  const checkScrollNeeded = useCallback(() => {
+    if (scrollContainerRef) {
+      const needsScroll =
+        scrollContainerRef.scrollWidth > scrollContainerRef.clientWidth;
+      setNeedsHorizontalScroll(needsScroll);
+    }
+  }, [scrollContainerRef]);
+
   // Sync scrolling between top scrollbar and content
   const handleTopScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
@@ -478,12 +488,27 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [topScrollRef]
   );
 
+  // Check scroll needed when component updates or window resizes
+  React.useEffect(() => {
+    checkScrollNeeded();
+    const handleResize = () => checkScrollNeeded();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [checkScrollNeeded, filteredColumnData]);
+
+  // Check scroll needed when container ref changes
+  React.useEffect(() => {
+    if (scrollContainerRef) {
+      checkScrollNeeded();
+    }
+  }, [scrollContainerRef, checkScrollNeeded]);
+
   const renderContent = useMemo(() => {
     if (loading) {
       return (
         <div className="flex flex-col h-screen overflow-y-hidden">
           {/* Skeleton Board Header */}
-          <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between">
+          <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <SkeletonButton className="w-12" />
               <div className="w-7 h-7 bg-gray-200 rounded-sm animate-shimmer bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]"></div>
@@ -500,12 +525,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           </header>
 
           {/* Skeleton Kanban Board */}
-          <div className="flex-1 bg-gray-50">
+          <div className="flex-1 bg-white">
             <SkeletonBoard />
           </div>
 
           {/* Skeleton Bottom Scrollbar */}
-          <div className="bg-white border-t border-gray-200 px-4 sm:px-6">
+          <div className="bg-white border-t border-gray-100 px-6">
             <div className="py-2">
               <div className="w-full h-3 bg-gray-200 rounded-full animate-shimmer bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]"></div>
             </div>
@@ -569,10 +594,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       >
         <div
           ref={setScrollContainerRef}
-          className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden bg-gray-50 content-scrollbar"
+          className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden bg-white content-scrollbar"
           onScroll={handleContentScroll}
         >
-          <div className="flex gap-3 sm:gap-4 p-4 sm:p-6 h-full min-w-max">
+          <div className="flex gap-6 pl-6 pr-6 py-6 h-full min-w-max">
             {filteredColumnData.map(({ column, tasks }) => (
               <Column
                 key={column.id}
@@ -598,26 +623,29 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         </DragOverlay>
       </DndContext>
 
-      {/* Bottom Scrollbar */}
-      <div className="bg-white border-t border-gray-200 px-4 sm:px-6">
-        <div className="py-2">
-          <div
-            ref={setTopScrollRef}
-            className="overflow-x-auto top-scrollbar"
-            onScroll={handleTopScroll}
-          >
+      {/* Bottom Scrollbar - Only show if content overflows */}
+      {needsHorizontalScroll && (
+        <div className="bg-white border-t border-gray-100 px-6">
+          <div className="py-2">
             <div
-              style={{
-                width:
-                  filteredColumnData.length * 320 +
-                  (filteredColumnData.length - 1) * 16 +
-                  "px",
-                height: "1px",
-              }}
-            ></div>
+              ref={setTopScrollRef}
+              className="overflow-x-auto top-scrollbar"
+              onScroll={handleTopScroll}
+            >
+              <div
+                style={{
+                  width:
+                    filteredColumnData.length * 320 +
+                    (filteredColumnData.length - 1) * 24 +
+                    48 +
+                    "px",
+                  height: "1px",
+                }}
+              ></div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Task Modal */}
       <TaskModal

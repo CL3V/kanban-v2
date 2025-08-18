@@ -62,10 +62,10 @@ export default function MembersManagementPage() {
   // Show skeleton while members are loading
   if (membersLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-white">
         {/* Top bar - consistent with dashboard */}
-        <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Image
                 src="/images/juke-logo.svg"
@@ -99,18 +99,22 @@ export default function MembersManagementPage() {
         </header>
 
         {/* Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main className="max-w-6xl mx-auto px-6 lg:px-8 py-8">
           {/* Page navigation */}
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-3 mb-8">
             <Link href="/">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-1" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-gray-200 hover:border-gray-300"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
               </Button>
             </Link>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
+          <div className="bg-white border border-gray-100 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <SkeletonHeader className="w-40 mb-2" />
@@ -146,10 +150,10 @@ export default function MembersManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Top bar - consistent with dashboard */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image
               src="/images/juke-logo.svg"
@@ -159,9 +163,7 @@ export default function MembersManagementPage() {
               className="rounded-sm"
               priority
             />
-            <h1 className="text-sm sm:text-base font-semibold text-gray-900">
-              Members
-            </h1>
+            <h1 className="text-lg font-medium text-gray-900">Members</h1>
           </div>
           <div className="flex items-center gap-2">
             <UserAvatar
@@ -183,28 +185,32 @@ export default function MembersManagementPage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-6xl mx-auto px-6 lg:px-8 py-8">
         {/* Page navigation */}
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center gap-3 mb-8">
           <Link href="/">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-gray-200 hover:border-gray-300"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
           </Link>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white border border-gray-100 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-xl font-semibold text-gray-900">
                 Team Management
               </h3>
-              <p className="text-sm text-gray-500">
-                Add users and manage roles.
-              </p>
+              <p className="text-gray-600 mt-1">Add users and manage roles.</p>
             </div>
-            <div className="text-sm text-gray-500">Total: {members.length}</div>
+            <div className="text-sm font-medium text-gray-500 bg-gray-50 px-3 py-1 rounded-full">
+              {members.length} {members.length === 1 ? "member" : "members"}
+            </div>
           </div>
 
           <MemberManagementHome

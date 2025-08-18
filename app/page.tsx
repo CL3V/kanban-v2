@@ -220,10 +220,10 @@ export default function HomePage() {
   }, [boards, filteredBoards, currentUser]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Top bar */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image
               src="/images/juke-logo.svg"
@@ -233,9 +233,7 @@ export default function HomePage() {
               className="rounded-sm"
               priority
             />
-            <h1 className="text-sm sm:text-base font-semibold text-gray-900">
-              Dashboard
-            </h1>
+            <h1 className="text-lg font-medium text-gray-900">Dashboard</h1>
           </div>
           <div className="flex items-center gap-2">
             {membersLoading && !currentUser ? (
@@ -277,34 +275,42 @@ export default function HomePage() {
       </header>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-6xl mx-auto px-6 lg:px-8 py-8">
         {/* Stats */}
-        <section className="mb-6">
+        <section className="mb-8">
           {loading ? (
             <SkeletonStats />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="text-sm text-gray-500">Projects</div>
-                <div className="mt-2 text-2xl font-semibold text-gray-900">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors">
+                <div className="text-sm font-medium text-gray-600 mb-1">
+                  Projects
+                </div>
+                <div className="text-3xl font-bold text-gray-900">
                   {stats.totalProjects}
                 </div>
               </div>
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="text-sm text-gray-500">Tasks</div>
-                <div className="mt-2 text-2xl font-semibold text-gray-900">
+              <div className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors">
+                <div className="text-sm font-medium text-gray-600 mb-1">
+                  Tasks
+                </div>
+                <div className="text-3xl font-bold text-gray-900">
                   {stats.totalTasks}
                 </div>
               </div>
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="text-sm text-gray-500">Team</div>
-                <div className="mt-2 text-2xl font-semibold text-gray-900">
+              <div className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors">
+                <div className="text-sm font-medium text-gray-600 mb-1">
+                  Team
+                </div>
+                <div className="text-3xl font-bold text-gray-900">
                   {stats.uniqueMembers}
                 </div>
               </div>
-              <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="text-sm text-gray-500">Last updated</div>
-                <div className="mt-2 text-2xl font-semibold text-gray-900">
+              <div className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors">
+                <div className="text-sm font-medium text-gray-600 mb-1">
+                  Last updated
+                </div>
+                <div className="text-3xl font-bold text-gray-900">
                   {new Date().toLocaleDateString()}
                 </div>
               </div>
@@ -314,21 +320,30 @@ export default function HomePage() {
 
         {/* Boards */}
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {currentUser?.role === "member" ? "Your Boards" : "All Boards"}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">
+              {currentUser?.role === "member"
+                ? "Your Projects"
+                : "All Projects"}
             </h2>
             {currentUser && currentUser.role !== "member" && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <Link href="/members">
-                  <Button variant="outline" size="sm">
-                    <Users className="h-4 w-4 mr-1" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-gray-200 hover:border-gray-300"
+                  >
+                    <Users className="h-4 w-4 mr-2" />
                     Members
                   </Button>
                 </Link>
                 <Link href="/boards/new">
-                  <Button size="sm">
-                    <Plus className="h-4 w-4 mr-1" />
+                  <Button
+                    size="sm"
+                    className="bg-gray-900 hover:bg-gray-800 text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
                     New Project
                   </Button>
                 </Link>
@@ -343,74 +358,86 @@ export default function HomePage() {
               ))}
             </div>
           ) : filteredBoards.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded-xl p-8 text-center text-gray-600">
+            <div className="bg-gray-50 rounded-2xl p-12 text-center">
               {currentUser?.role !== "member" ? (
-                <div className="space-y-3">
-                  <div className="text-base">No projects yet.</div>
+                <div className="space-y-4">
+                  <div className="text-lg font-medium text-gray-900">
+                    No projects yet
+                  </div>
+                  <div className="text-gray-600">
+                    Get started by creating your first project
+                  </div>
                   <Link href="/boards/new">
-                    <Button>
-                      <Plus className="h-4 w-4 mr-1" />
-                      Create your first project
+                    <Button className="bg-gray-900 hover:bg-gray-800 text-white mt-4">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Project
                     </Button>
                   </Link>
                 </div>
               ) : (
-                <div className="text-base">
-                  You're not assigned to any boards.
+                <div className="text-lg font-medium text-gray-900">
+                  You're not assigned to any projects yet
                 </div>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredBoards.map((board) => {
                 const stats = getBoardStats(board);
                 return (
                   <div
                     key={board.id}
-                    className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-3"
+                    className="bg-white border border-gray-100 rounded-2xl p-6 flex flex-col gap-4 hover:border-gray-200 hover:shadow-sm transition-all duration-200"
                   >
                     <div className="flex items-start justify-between">
-                      <div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          {board.title}
+                        </h3>
                         <div className="text-sm text-gray-500">
                           Updated{" "}
                           {new Date(board.updatedAt).toLocaleDateString()}
                         </div>
-                        <h3 className="text-base font-semibold text-gray-900">
-                          {board.title}
-                        </h3>
                       </div>
                       {currentUser && currentUser.role !== "member" && (
                         <Button
                           variant="outline"
                           size="icon"
                           title="Delete"
+                          className="border-gray-200 hover:border-red-200 hover:bg-red-50"
                           onClick={() =>
                             handleDeleteBoard(board.id, board.title)
                           }
                         >
-                          <Trash2 className="h-4 w-4 text-red-600" />
+                          <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Folder className="h-4 w-4 text-blue-600" />
-                        {Object.keys(board.tasks).length} tasks
+                    <div className="flex flex-wrap gap-x-6 gap-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 whitespace-nowrap">
+                          {Object.keys(board.tasks).length} tasks
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Users className="h-4 w-4 text-green-600" />
-                        {Object.keys(board.members || {}).length} members
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 whitespace-nowrap">
+                          {Object.keys(board.members || {}).length} members
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="h-4 w-4 text-purple-600" />
-                        {board.columns.length} columns
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 whitespace-nowrap">
+                          {board.columns.length} columns
+                        </span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-2">
                       <div className="flex -space-x-2">
                         {Object.values(board.members || {})
-                          .slice(0, 4)
+                          .slice(0, 3)
                           .map((m) => (
                             <UserAvatar
                               key={m.id}
@@ -421,14 +448,19 @@ export default function HomePage() {
                               className="ring-2 ring-white"
                             />
                           ))}
-                        {Object.keys(board.members || {}).length > 4 && (
-                          <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 grid place-items-center text-xs text-gray-600">
-                            +{Object.keys(board.members || {}).length - 4}
+                        {Object.keys(board.members || {}).length > 3 && (
+                          <div className="w-8 h-8 rounded-full bg-gray-100 grid place-items-center text-xs font-medium text-gray-600">
+                            +{Object.keys(board.members || {}).length - 3}
                           </div>
                         )}
                       </div>
                       <Link href={`/boards/${board.id}`}>
-                        <Button size="sm">Open</Button>
+                        <Button
+                          size="sm"
+                          className="bg-gray-900 hover:bg-gray-800 text-white"
+                        >
+                          Open
+                        </Button>
                       </Link>
                     </div>
                   </div>
