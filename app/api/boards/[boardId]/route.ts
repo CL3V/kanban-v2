@@ -103,10 +103,29 @@ export async function DELETE(
 ) {
   try {
     const { boardId } = await params;
+    const body = await request.json();
+    const { boardName } = body;
+
+    // Validate that board name is provided
+    if (!boardName || typeof boardName !== "string") {
+      return NextResponse.json(
+        { error: "Board name is required for deletion confirmation" },
+        { status: 400 }
+      );
+    }
+
     const existingBoard = await S3Service.getBoard(boardId);
 
     if (!existingBoard) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
+    }
+
+    // Validate that the provided board name matches the actual board title
+    if (boardName !== existingBoard.title) {
+      return NextResponse.json(
+        { error: "Board name does not match. Deletion cancelled." },
+        { status: 400 }
+      );
     }
 
     await S3Service.deleteBoard(boardId);

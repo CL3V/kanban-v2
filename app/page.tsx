@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { UserSelector } from "@/components/UserSelector";
 import { UserAvatar } from "@/components/UserAvatar";
+import { DeleteBoardConfirmationDialog } from "@/components/DeleteBoardConfirmationDialog";
 import {
   SkeletonCard,
   SkeletonStats,
@@ -22,6 +23,16 @@ export default function HomePage() {
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    boardId: string;
+    boardTitle: string;
+  }>({
+    isOpen: false,
+    boardId: "",
+    boardTitle: "",
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchBoards();
@@ -76,17 +87,45 @@ export default function HomePage() {
     }
   };
 
-  const handleDeleteBoard = async (boardId: string, boardTitle: string) => {
-    if (!confirm(`Are you sure you want to delete "${boardTitle}"?`)) return;
+  const handleDeleteBoard = (boardId: string, boardTitle: string) => {
+    setDeleteDialog({
+      isOpen: true,
+      boardId,
+      boardTitle,
+    });
+  };
+
+  const confirmDeleteBoard = async () => {
+    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/boards/${boardId}`, {
+      const response = await fetch(`/api/boards/${deleteDialog.boardId}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          boardName: deleteDialog.boardTitle,
+        }),
       });
-      if (!response.ok) throw new Error("Failed to delete board");
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete board");
+      }
+
       await fetchBoards();
+      setDeleteDialog({ isOpen: false, boardId: "", boardTitle: "" });
     } catch (err) {
       console.error("Error deleting board:", err);
-      alert("Failed to delete board");
+      alert(err instanceof Error ? err.message : "Failed to delete board");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const closeDeleteDialog = () => {
+    if (!isDeleting) {
+      setDeleteDialog({ isOpen: false, boardId: "", boardTitle: "" });
     }
   };
 
@@ -333,6 +372,15 @@ export default function HomePage() {
         members={members}
         onMembersUpdate={fetchMembers}
         loading={membersLoading}
+      />
+
+      {/* Delete Board Confirmation Dialog */}
+      <DeleteBoardConfirmationDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={closeDeleteDialog}
+        onConfirm={confirmDeleteBoard}
+        boardTitle={deleteDialog.boardTitle}
+        isDeleting={isDeleting}
       />
     </div>
   );
