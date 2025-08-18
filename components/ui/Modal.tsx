@@ -53,22 +53,24 @@ export const Modal: React.FC<ModalProps> = ({
       />
       
       {/* Modal */}
-      <div className={`relative bg-white rounded-lg shadow-xl ${sizeClasses[size]} w-full mx-4 max-h-[90vh] overflow-hidden animate-slide-up`}>
+      <div className={`relative bg-white rounded-lg shadow-xl ${sizeClasses[size]} w-full mx-2 sm:mx-4 max-h-[90vh] overflow-hidden animate-slide-up`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-secondary-200">
-          <h2 className="text-xl font-semibold text-secondary-900">{title}</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="text-secondary-400 hover:text-secondary-600"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+        {title && (
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-secondary-200">
+            <h2 className="text-lg sm:text-xl font-semibold text-secondary-900">{title}</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="text-secondary-400 hover:text-secondary-600"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
         
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div className={`${title ? 'p-4 sm:p-6' : ''} overflow-y-auto ${title ? 'max-h-[calc(90vh-120px)]' : 'max-h-[90vh]'}`}>
           {children}
         </div>
       </div>

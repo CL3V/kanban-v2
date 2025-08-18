@@ -6,12 +6,19 @@ import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { UserSelector } from "@/components/UserSelector";
 import { UserAvatar } from "@/components/UserAvatar";
+import {
+  SkeletonCard,
+  SkeletonStats,
+  SkeletonHeader,
+  SkeletonButton,
+} from "@/components/ui/Skeleton";
 import { Plus, Folder, Calendar, Users, Trash2 } from "lucide-react";
 import type { Board, Member } from "@/types/kanban";
 
 export default function HomePage() {
   const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
+  const [membersLoading, setMembersLoading] = useState(true);
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -24,6 +31,7 @@ export default function HomePage() {
 
   const fetchMembers = async () => {
     try {
+      setMembersLoading(true);
       const response = await fetch("/api/members");
       if (response.ok) {
         const data = await response.json();
@@ -31,6 +39,8 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error("Error fetching members:", error);
+    } finally {
+      setMembersLoading(false);
     }
   };
 
@@ -123,7 +133,15 @@ export default function HomePage() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            {currentUser && (
+            {membersLoading && !currentUser ? (
+              <div className="hidden md:flex items-center gap-2 pr-2">
+                <div className="w-8 h-8 bg-gray-200 rounded-full animate-shimmer bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]"></div>
+                <div className="text-sm space-y-1">
+                  <div className="h-3 w-20 bg-gray-200 rounded animate-shimmer bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]"></div>
+                  <div className="h-2 w-16 bg-gray-200 rounded animate-shimmer bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]"></div>
+                </div>
+              </div>
+            ) : currentUser ? (
               <div className="hidden md:flex items-center gap-2 pr-2">
                 <UserAvatar
                   member={currentUser}
@@ -140,12 +158,14 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-            )}
-            {currentUser && (
+            ) : null}
+            {membersLoading && !currentUser ? (
+              <SkeletonButton className="w-16" />
+            ) : currentUser ? (
               <Button variant="outline" size="sm" onClick={handleUserChange}>
                 Switch
               </Button>
-            )}
+            ) : null}
             {/* Admin/PM quick actions moved to boards header */}
           </div>
         </div>
@@ -154,31 +174,37 @@ export default function HomePage() {
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Stats */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="text-sm text-gray-500">Projects</div>
-            <div className="mt-2 text-2xl font-semibold text-gray-900">
-              {stats.totalProjects}
+        <section className="mb-6">
+          {loading ? (
+            <SkeletonStats />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <div className="text-sm text-gray-500">Projects</div>
+                <div className="mt-2 text-2xl font-semibold text-gray-900">
+                  {stats.totalProjects}
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <div className="text-sm text-gray-500">Tasks</div>
+                <div className="mt-2 text-2xl font-semibold text-gray-900">
+                  {stats.totalTasks}
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <div className="text-sm text-gray-500">Team</div>
+                <div className="mt-2 text-2xl font-semibold text-gray-900">
+                  {stats.uniqueMembers}
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <div className="text-sm text-gray-500">Last updated</div>
+                <div className="mt-2 text-2xl font-semibold text-gray-900">
+                  {new Date().toLocaleDateString()}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="text-sm text-gray-500">Tasks</div>
-            <div className="mt-2 text-2xl font-semibold text-gray-900">
-              {stats.totalTasks}
-            </div>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="text-sm text-gray-500">Team</div>
-            <div className="mt-2 text-2xl font-semibold text-gray-900">
-              {stats.uniqueMembers}
-            </div>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="text-sm text-gray-500">Last updated</div>
-            <div className="mt-2 text-2xl font-semibold text-gray-900">
-              {new Date().toLocaleDateString()}
-            </div>
-          </div>
+          )}
         </section>
 
         {/* Boards */}
@@ -208,10 +234,7 @@ export default function HomePage() {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div
-                  key={i}
-                  className="h-28 bg-white border border-gray-200 rounded-xl animate-pulse"
-                />
+                <SkeletonCard key={i} />
               ))}
             </div>
           ) : filteredBoards.length === 0 ? (
@@ -309,6 +332,7 @@ export default function HomePage() {
         onUserSelect={handleUserSelect}
         members={members}
         onMembersUpdate={fetchMembers}
+        loading={membersLoading}
       />
     </div>
   );

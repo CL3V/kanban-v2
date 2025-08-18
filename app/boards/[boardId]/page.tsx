@@ -21,6 +21,7 @@ export default function BoardPage({ params }: BoardPageProps) {
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [board, setBoard] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
+  const [membersLoading, setMembersLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   const fetchMembers = async () => {
     try {
+      setMembersLoading(true);
       const response = await fetch("/api/members");
       if (response.ok) {
         const data = await response.json();
@@ -45,6 +47,8 @@ export default function BoardPage({ params }: BoardPageProps) {
       }
     } catch (error) {
       console.error("Error fetching members:", error);
+    } finally {
+      setMembersLoading(false);
     }
   };
 
@@ -154,6 +158,7 @@ export default function BoardPage({ params }: BoardPageProps) {
         onUserSelect={handleUserSelect}
         members={members}
         onMembersUpdate={fetchMembers}
+        loading={membersLoading}
       />
 
       {/* Kanban Board with integrated header */}
