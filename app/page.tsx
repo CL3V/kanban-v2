@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { UserSelector } from "@/components/UserSelector";
 import { UserAvatar } from "@/components/UserAvatar";
 import { DeleteBoardConfirmationDialog } from "@/components/DeleteBoardConfirmationDialog";
+import { useToast } from "@/contexts/ToastContext";
 import {
   SkeletonCard,
   SkeletonStats,
@@ -17,6 +18,7 @@ import { Plus, Folder, Calendar, Users, Trash2 } from "lucide-react";
 import type { Board, Member } from "@/types/kanban";
 
 export default function HomePage() {
+  const { showSuccess, showError } = useToast();
   const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
   const [membersLoading, setMembersLoading] = useState(true);
@@ -115,9 +117,16 @@ export default function HomePage() {
 
       await fetchBoards();
       setDeleteDialog({ isOpen: false, boardId: "", boardTitle: "" });
+      showSuccess(
+        "Board Deleted",
+        `"${deleteDialog.boardTitle}" has been permanently deleted.`
+      );
     } catch (err) {
       console.error("Error deleting board:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete board");
+      showError(
+        "Delete Failed",
+        err instanceof Error ? err.message : "Failed to delete board"
+      );
     } finally {
       setIsDeleting(false);
     }

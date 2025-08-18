@@ -6,6 +6,7 @@ import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
 import { UserAvatar } from "./UserAvatar";
 import { PermissionService } from "@/lib/PermissionService";
+import { useToast } from "@/contexts/ToastContext";
 import {
   Users,
   Plus,
@@ -32,6 +33,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   onMembersUpdate,
   onBoardStateUpdate,
 }) => {
+  const { showSuccess, showError } = useToast();
   // In this simplified setup, we read currentUser from localStorage on mount
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   useEffect(() => {
@@ -139,9 +141,17 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
       } else {
         onMembersUpdate();
       }
+
+      const memberCount = selectedMembers.size;
+      showSuccess(
+        "Members Added",
+        `${memberCount} member${
+          memberCount > 1 ? "s" : ""
+        } added to the board successfully`
+      );
     } catch (error) {
       console.error("Error adding members:", error);
-      alert("Failed to add members");
+      showError("Add Failed", "Failed to add members");
     } finally {
       setAddingMembers(false);
     }
@@ -203,9 +213,19 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
       } else {
         onMembersUpdate();
       }
+
+      showSuccess(
+        editingMember ? "Member Updated" : "Member Added",
+        `${formData.name} has been ${
+          editingMember ? "updated" : "added to the board"
+        } successfully`
+      );
     } catch (error) {
       console.error("Error saving member:", error);
-      alert(`Failed to ${editingMember ? "update" : "add"} member`);
+      showError(
+        editingMember ? "Update Failed" : "Add Failed",
+        `Failed to ${editingMember ? "update" : "add"} member`
+      );
     }
   };
 
@@ -238,9 +258,14 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
       } else {
         onMembersUpdate();
       }
+
+      showSuccess(
+        "Member Removed",
+        `${memberName} has been removed from the board`
+      );
     } catch (error) {
       console.error("Error removing member:", error);
-      alert("Failed to remove member");
+      showError("Remove Failed", "Failed to remove member");
     }
   };
 

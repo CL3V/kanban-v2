@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
+import { useToast } from "@/contexts/ToastContext";
 
 export default function NewBoardPage() {
   const router = useRouter();
+  const { showSuccess, showError } = useToast();
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -46,10 +48,17 @@ export default function NewBoardPage() {
       }
 
       const board = await response.json();
+      showSuccess(
+        "Board Created",
+        `"${formData.title}" has been created successfully!`
+      );
       router.push(`/boards/${board.id}`);
     } catch (error) {
       console.error("Error creating board:", error);
-      alert("Failed to create board");
+      showError(
+        "Creation Failed",
+        error instanceof Error ? error.message : "Failed to create board"
+      );
     } finally {
       setIsCreating(false);
     }

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Column, Board } from "@/types/kanban";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
+import { useToast } from "@/contexts/ToastContext";
 import {
   Columns,
   Plus,
@@ -128,6 +129,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
   onColumnsUpdate,
   onBoardStateUpdate,
 }) => {
+  const { showSuccess, showError } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingColumn, setEditingColumn] = useState<Column | null>(null);
   const [formData, setFormData] = useState({
@@ -289,9 +291,17 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
       } else {
         onColumnsUpdate();
       }
+
+      showSuccess(
+        editingColumn ? "Column Updated" : "Column Added",
+        `"${formData.title}" has been ${
+          editingColumn ? "updated" : "added"
+        } successfully`
+      );
     } catch (error) {
       console.error("Error saving column:", error);
-      alert(
+      showError(
+        editingColumn ? "Update Failed" : "Add Failed",
         error instanceof Error
           ? error.message
           : `Failed to ${editingColumn ? "update" : "add"} column`
@@ -327,9 +337,17 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
       } else {
         onColumnsUpdate();
       }
+
+      showSuccess(
+        "Column Deleted",
+        `"${columnTitle}" has been deleted successfully`
+      );
     } catch (error) {
       console.error("Error deleting column:", error);
-      alert(error instanceof Error ? error.message : "Failed to delete column");
+      showError(
+        "Delete Failed",
+        error instanceof Error ? error.message : "Failed to delete column"
+      );
     }
   };
 

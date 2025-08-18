@@ -31,6 +31,7 @@ import { useBoard } from "@/hooks/useBoard";
 import { PermissionService } from "@/lib/PermissionService";
 import { useModalState } from "@/hooks/useModalState";
 import { useColumnData } from "@/hooks/useColumnData";
+import { useToast } from "@/contexts/ToastContext";
 import { Member } from "@/types/kanban";
 
 interface KanbanBoardProps {
@@ -42,6 +43,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   boardId,
   currentUser,
 }) => {
+  const { showSuccess, showError } = useToast();
   const {
     board,
     loading,
@@ -87,69 +89,93 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const handleCreateTask = useCallback(
     async (taskData: CreateTaskRequest) => {
       if (!currentUser || !PermissionService.canCreateTask(currentUser)) {
-        alert("You don't have permission to create tasks");
+        showError(
+          "Permission Denied",
+          "You don't have permission to create tasks"
+        );
         return;
       }
 
       try {
         await createTask(taskData);
+        showSuccess(
+          "Task Created",
+          `"${taskData.title}" has been created successfully`
+        );
         closeModal();
       } catch (err) {
         console.error("Error creating task:", err);
-        alert("Failed to create task");
+        showError("Creation Failed", "Failed to create task");
       }
     },
-    [createTask, closeModal, currentUser]
+    [createTask, closeModal, currentUser, showSuccess, showError]
   );
 
   const handleUpdateTask = useCallback(
     async (taskId: string, taskData: UpdateTaskRequest) => {
       if (!currentUser || !PermissionService.canEditTask(currentUser)) {
-        alert("You don't have permission to edit tasks");
+        showError(
+          "Permission Denied",
+          "You don't have permission to edit tasks"
+        );
         return;
       }
 
       try {
         await updateTask(taskId, taskData);
+        showSuccess(
+          "Task Updated",
+          `"${taskData.title}" has been updated successfully`
+        );
         closeModal();
       } catch (err) {
         console.error("Error updating task:", err);
-        alert("Failed to update task");
+        showError("Update Failed", "Failed to update task");
       }
     },
-    [updateTask, closeModal, currentUser]
+    [updateTask, closeModal, currentUser, showSuccess, showError]
   );
 
   const handleDeleteTask = useCallback(
     async (taskId: string) => {
       if (!currentUser || !PermissionService.canDeleteTask(currentUser)) {
-        alert("You don't have permission to delete tasks");
+        showError(
+          "Permission Denied",
+          "You don't have permission to delete tasks"
+        );
         return;
       }
 
       if (!confirm("Are you sure you want to delete this task?")) return;
 
       try {
+        const taskTitle = board?.tasks[taskId]?.title || "Task";
         await deleteTask(taskId);
+        showSuccess(
+          "Task Deleted",
+          `"${taskTitle}" has been deleted successfully`
+        );
         closeModal();
       } catch (err) {
         console.error("Error deleting task:", err);
-        alert("Failed to delete task");
+        showError("Delete Failed", "Failed to delete task");
       }
     },
-    [deleteTask, closeModal, currentUser]
+    [deleteTask, closeModal, currentUser, board, showSuccess, showError]
   );
 
   const handleMoveTask = useCallback(
     async (taskId: string, newStatus: TaskStatus, newPosition?: number) => {
       try {
         await moveTask(taskId, newStatus, newPosition);
+        const taskTitle = board?.tasks[taskId]?.title || "Task";
+        showSuccess("Task Moved", `"${taskTitle}" moved to ${newStatus}`);
       } catch (err) {
         console.error("Error moving task:", err);
-        alert("Failed to move task");
+        showError("Move Failed", "Failed to move task");
       }
     },
-    [moveTask]
+    [moveTask, board, showSuccess, showError]
   );
 
   const handleDragStart = useCallback(
