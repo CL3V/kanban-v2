@@ -33,6 +33,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const [mounted, setMounted] = useState(false);
   const [Editor, setEditor] = useState<any>(null);
   const editorRef = useRef<any>(null);
+  // Track the last value we emitted to avoid echo updates resetting cursor
+  const lastEmittedValueRef = useRef<string | null>(null);
 
   // Initialize editor state with proper value handling
   const initialEditorState = useMemo(() => {
@@ -78,21 +80,31 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (!mounted) return;
 
     try {
+      // If the incoming value equals the last emitted value, it's an echo of our own
+      // change—skip to prevent selection reset/cursor jump on backspace.
+      if (value === lastEmittedValueRef.current) {
+        return;
+      }
+
       if (value && value.trim()) {
         // Try to parse as Draft.js raw state first
         try {
           const rawState = JSON.parse(value);
           const contentState = convertFromRaw(rawState);
           const newEditorState = EditorState.createWithContent(contentState);
-          setEditorState(newEditorState);
+          // Move selection to end to keep caret intuitive on external set
+          setEditorState(EditorState.moveSelectionToEnd(newEditorState));
+          lastEmittedValueRef.current = value;
         } catch {
           // If not valid JSON, treat as plain text
           const contentState = ContentState.createFromText(value);
           const newEditorState = EditorState.createWithContent(contentState);
-          setEditorState(newEditorState);
+          setEditorState(EditorState.moveSelectionToEnd(newEditorState));
+          lastEmittedValueRef.current = value;
         }
       } else if (!value) {
         setEditorState(EditorState.createEmpty());
+        lastEmittedValueRef.current = "";
       }
     } catch (error) {
       console.error("Error updating editor state:", error);
@@ -109,7 +121,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         const contentState = newEditorState.getCurrentContent();
         const rawState = convertToRaw(contentState);
         // Store as JSON string for compatibility
-        onChange(JSON.stringify(rawState));
+        const nextValue = JSON.stringify(rawState);
+        // Only emit when value actually changes to avoid prop echo loops
+        if (nextValue !== lastEmittedValueRef.current) {
+          lastEmittedValueRef.current = nextValue;
+          onChange(nextValue);
+        }
       } catch (error) {
         console.error("Error handling editor state change:", error);
       }
