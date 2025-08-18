@@ -160,8 +160,8 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
             </Link>
 
             <Image
-              src="/images/logo.png"
-              alt="App Logo"
+              src="/images/juke-logo.svg"
+              alt="Juke Logo"
               width={28}
               height={28}
               className="rounded-sm"

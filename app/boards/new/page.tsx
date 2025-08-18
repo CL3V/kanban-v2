@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft, Save } from "lucide-react";
@@ -11,6 +11,11 @@ export default function NewBoardPage() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
   const [isCreating, setIsCreating] = useState(false);
+
+  useEffect(() => {
+    // Set page title
+    document.title = "New Project | Juke";
+  }, []);
   const [formData, setFormData] = useState({
     title: "",
     description: "",

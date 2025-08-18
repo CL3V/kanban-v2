@@ -74,6 +74,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [tagInput, setTagInput] = useState("");
   const [newComment, setNewComment] = useState("");
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
+  const [isAddingComment, setIsAddingComment] = useState(false);
 
   // Get all existing tags from other tasks
   const getExistingTags = (): string[] => {
@@ -180,13 +181,23 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !task || !currentUser || !onAddComment) return;
+    if (
+      !newComment.trim() ||
+      !task ||
+      !currentUser ||
+      !onAddComment ||
+      isAddingComment
+    )
+      return;
 
+    setIsAddingComment(true);
     try {
       await onAddComment(task.id, newComment.trim());
       setNewComment("");
     } catch (error) {
       console.error("Error adding comment:", error);
+    } finally {
+      setIsAddingComment(false);
     }
   };
 
@@ -669,16 +680,21 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       }
                     }}
                     placeholder="Add a comment..."
-                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={isAddingComment}
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <Button
                     type="button"
                     onClick={handleAddComment}
-                    disabled={!newComment.trim()}
+                    disabled={!newComment.trim() || isAddingComment}
                     size="sm"
                     className="px-3"
                   >
-                    <Send className="h-4 w-4" />
+                    {isAddingComment ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                    ) : (
+                      <Send className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </div>

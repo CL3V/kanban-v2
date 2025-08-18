@@ -6,20 +6,20 @@ import { ClientProviders } from "@/components/ClientProviders";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Core Team Kanban",
+  title: "Juke",
   description:
-    "A powerful Kanban board application for managing projects and tasks for Core Team",
+    "A powerful Kanban board application for managing projects and tasks",
   keywords: ["kanban", "project management", "tasks", "productivity", "agile"],
   icons: {
-    icon: "/images/logo.png",
-    shortcut: "/images/logo.png",
-    apple: "/images/logo.png",
+    icon: "/images/juke-logo.svg",
+    shortcut: "/images/juke-logo.svg",
+    apple: "/images/juke-logo.svg",
   },
   openGraph: {
-    images: ["/images/logo.png"],
+    images: ["/images/juke-logo.svg"],
   },
   twitter: {
-    images: ["/images/logo.png"],
+    images: ["/images/juke-logo.svg"],
   },
 };
 

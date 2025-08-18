@@ -2,6 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Top scrollbar for Kanban board */
+.top-scrollbar {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-gutter: stable both-edges;
+}
+
+/* Content scrollbar (hidden) for Kanban board */
+.content-scrollbar {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.content-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 /* Visible horizontal scrollbar for Kanban board */
 .horizontal-scrollbar {
   overflow-x: auto;
@@ -15,31 +34,44 @@
   scrollbar-width: none; /* Firefox */
 }
 .no-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 
-/* WebKit Browsers */
-.horizontal-scrollbar::-webkit-scrollbar {
-  height: 10px; /* thicker for visibility */
+/* Top scrollbar styling - Juke Branded */
+.top-scrollbar::-webkit-scrollbar {
+  height: 14px;
 }
-.horizontal-scrollbar::-webkit-scrollbar-track {
-  background: #e5e7eb; /* gray-200 */
-  border-radius: 9999px;
+.top-scrollbar::-webkit-scrollbar-track {
+  background: linear-gradient(90deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%);
+  border-radius: 20px;
+  margin: 0 8px;
+  border: 1px solid #e2e8f0;
 }
-.horizontal-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #293750; /* gray-400 */
-  border-radius: 9999px;
-  border: 2px solid #e5e7eb; /* creates pill look */
+.top-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #3a5afe 0%, #2563eb 50%, #1d4ed8 100%);
+  border-radius: 20px;
+  border: 2px solid #f8fafc;
+  min-width: 40px;
+  position: relative;
 }
-.horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #6b7280; /* gray-500 */
+.top-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 50%, #1e3a8a 100%);
+  border: 2px solid #e2e8f0;
+  transform: scale(1.05);
 }
 
-/* Firefox */
+/* Legacy styles removed - using new Juke branded scrollbars below */
+
+/* Firefox - Juke Branded */
 @supports (scrollbar-color: auto) {
+  .top-scrollbar {
+    scrollbar-width: auto;
+    scrollbar-color: #3a5afe #f1f5f9; /* Juke blue thumb, light track */
+  }
+
   .horizontal-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: #4d72eb #e5e7eb; /* thumb track */
+    scrollbar-color: #3a5afe #e5e7eb; /* Juke blue thumb, track */
   }
 }
 
@@ -251,26 +283,29 @@
     display: none; /* Chrome, Safari, Opera */
   }
 
-  /* Styled horizontal scrollbar (used by Kanban columns wrapper) */
+  /* Styled horizontal scrollbar (used by Kanban columns wrapper) - Juke Branded */
   .horizontal-scrollbar {
-    /* Make horizontal scrollbar more visible */
-    scrollbar-width: thin; /* Firefox */
-    scrollbar-color: #293750 #e5e7eb; /* thumb, track */
+    scrollbar-width: auto; /* Firefox */
+    scrollbar-color: #3a5afe #f1f5f9; /* Juke blue thumb, light track */
   }
   .horizontal-scrollbar::-webkit-scrollbar {
-    height: 10px; /* thicker for visibility */
+    height: 12px; /* comfortable size */
   }
   .horizontal-scrollbar::-webkit-scrollbar-track {
-    background: #e5e7eb; /* gray-200 */
-    border-radius: 9999px; /* pill */
+    background: linear-gradient(90deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%);
+    border-radius: 20px;
+    margin: 0 4px;
+    border: 1px solid #e2e8f0;
   }
   .horizontal-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #293750; /* darker thumb for contrast */
-    border-radius: 9999px;
-    border: 2px solid #e5e7eb; /* pill look */
+    background: linear-gradient(135deg, #3a5afe 0%, #2563eb 100%);
+    border-radius: 20px;
+    border: 2px solid #f8fafc;
+    min-width: 30px;
   }
   .horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: #475569; /* slate-600 on hover */
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    border: 2px solid #e2e8f0;
   }
   /* hover state inherits from global scrollbar styles */
 

@@ -89,6 +89,9 @@ export default function BoardPage({ params }: BoardPageProps) {
       if (response.ok) {
         const boardData = await response.json();
         setBoard(boardData);
+
+        // Set page title with board name
+        document.title = `${boardData.title} | Juke`;
       }
     } catch (error) {
       console.error("Error fetching board:", error);

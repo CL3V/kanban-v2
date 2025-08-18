@@ -14,7 +14,16 @@ import {
   SkeletonHeader,
   SkeletonButton,
 } from "@/components/ui/Skeleton";
-import { Plus, Folder, Calendar, Users, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Folder,
+  Calendar,
+  Users,
+  Trash2,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+} from "lucide-react";
 import type { Board, Member } from "@/types/kanban";
 
 export default function HomePage() {
@@ -40,6 +49,9 @@ export default function HomePage() {
     fetchBoards();
     fetchMembers();
     checkCurrentUser();
+
+    // Set page title
+    document.title = "Dashboard | Juke";
   }, []);
 
   const fetchMembers = async () => {
@@ -138,6 +150,51 @@ export default function HomePage() {
     }
   };
 
+  // Calculate board progress statistics
+  const getBoardStats = (board: Board) => {
+    const tasks = Object.values(board.tasks);
+    const totalTasks = tasks.length;
+
+    if (totalTasks === 0) {
+      return {
+        total: 0,
+        completed: 0,
+        inProgress: 0,
+        todo: 0,
+        completionRate: 0,
+      };
+    }
+
+    const completed = tasks.filter(
+      (task) =>
+        task.status === "done" ||
+        task.status === "deployed" ||
+        task.status === "completed"
+    ).length;
+
+    const inProgress = tasks.filter(
+      (task) =>
+        task.status === "in-progress" ||
+        task.status === "in-development" ||
+        task.status === "in-review" ||
+        task.status === "code-review"
+    ).length;
+
+    const todo = tasks.filter(
+      (task) => task.status === "todo" || task.status === "backlog"
+    ).length;
+
+    const completionRate = Math.round((completed / totalTasks) * 100);
+
+    return {
+      total: totalTasks,
+      completed,
+      inProgress,
+      todo,
+      completionRate,
+    };
+  };
+
   const filteredBoards = useMemo(() => {
     return boards.filter((board) => {
       if (!currentUser) return false;
@@ -169,8 +226,8 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image
-              src="/images/logo.png"
-              alt="App Logo"
+              src="/images/juke-logo.svg"
+              alt="Juke Logo"
               width={28}
               height={28}
               className="rounded-sm"
@@ -305,71 +362,78 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {filteredBoards.map((board) => (
-                <div
-                  key={board.id}
-                  className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-3"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="text-sm text-gray-500">
-                        Updated {new Date(board.updatedAt).toLocaleDateString()}
-                      </div>
-                      <h3 className="text-base font-semibold text-gray-900">
-                        {board.title}
-                      </h3>
-                    </div>
-                    {currentUser && currentUser.role !== "member" && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        title="Delete"
-                        onClick={() => handleDeleteBoard(board.id, board.title)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Folder className="h-4 w-4 text-blue-600" />
-                      {Object.keys(board.tasks).length} tasks
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Users className="h-4 w-4 text-green-600" />
-                      {Object.keys(board.members || {}).length} members
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar className="h-4 w-4 text-purple-600" />
-                      {board.columns.length} columns
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <div className="flex -space-x-2">
-                      {Object.values(board.members || {})
-                        .slice(0, 4)
-                        .map((m) => (
-                          <UserAvatar
-                            key={m.id}
-                            member={m}
-                            size="sm"
-                            showName={false}
-                            showRole={false}
-                            className="ring-2 ring-white"
-                          />
-                        ))}
-                      {Object.keys(board.members || {}).length > 4 && (
-                        <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 grid place-items-center text-xs text-gray-600">
-                          +{Object.keys(board.members || {}).length - 4}
+              {filteredBoards.map((board) => {
+                const stats = getBoardStats(board);
+                return (
+                  <div
+                    key={board.id}
+                    className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-3"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500">
+                          Updated{" "}
+                          {new Date(board.updatedAt).toLocaleDateString()}
                         </div>
+                        <h3 className="text-base font-semibold text-gray-900">
+                          {board.title}
+                        </h3>
+                      </div>
+                      {currentUser && currentUser.role !== "member" && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          title="Delete"
+                          onClick={() =>
+                            handleDeleteBoard(board.id, board.title)
+                          }
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
                       )}
                     </div>
-                    <Link href={`/boards/${board.id}`}>
-                      <Button size="sm">Open</Button>
-                    </Link>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Folder className="h-4 w-4 text-blue-600" />
+                        {Object.keys(board.tasks).length} tasks
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Users className="h-4 w-4 text-green-600" />
+                        {Object.keys(board.members || {}).length} members
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 text-purple-600" />
+                        {board.columns.length} columns
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex -space-x-2">
+                        {Object.values(board.members || {})
+                          .slice(0, 4)
+                          .map((m) => (
+                            <UserAvatar
+                              key={m.id}
+                              member={m}
+                              size="sm"
+                              showName={false}
+                              showRole={false}
+                              className="ring-2 ring-white"
+                            />
+                          ))}
+                        {Object.keys(board.members || {}).length > 4 && (
+                          <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 grid place-items-center text-xs text-gray-600">
+                            +{Object.keys(board.members || {}).length - 4}
+                          </div>
+                        )}
+                      </div>
+                      <Link href={`/boards/${board.id}`}>
+                        <Button size="sm">Open</Button>
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

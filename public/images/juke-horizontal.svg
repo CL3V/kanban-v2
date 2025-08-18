@@ -1,0 +1,32 @@
+<!-- Juke horizontal logo -->
+<svg width="640" height="256" viewBox="0 0 640 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title>Juke</title>
+  <desc>Juke logo with kanban mark and wordmark</desc>
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3A5AFE"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Mark -->
+  <g transform="translate(0,0)">
+    <rect x="8" y="8" width="240" height="240" rx="44" fill="url(#g1)"/>
+    <g>
+      <rect x="52" y="60" width="28" height="132" rx="10" fill="white" fill-opacity="0.95"/>
+      <rect x="48" y="48" width="36" height="8" rx="4" fill="#93C5FD" opacity="0.9"/>
+      <rect x="114" y="44" width="28" height="148" rx="10" fill="white" fill-opacity="0.95"/>
+      <rect x="110" y="32" width="36" height="8" rx="4" fill="#60A5FA" opacity="0.9"/>
+      <rect x="176" y="76" width="28" height="116" rx="10" fill="white" fill-opacity="0.95"/>
+      <rect x="172" y="64" width="36" height="8" rx="4" fill="#22C55E" opacity="0.95"/>
+    </g>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(288, 55)">
+    <!-- Use a strong, modern sans; adjust if you have a brand font -->
+    <text x="0" y="120" font-family="Inter, Poppins, Segoe UI, Roboto, Arial, sans-serif"
+          font-size="124" font-weight="700" letter-spacing="0.5"
+          fill="#0F172A">Juke</text>
+  </g>
+</svg>

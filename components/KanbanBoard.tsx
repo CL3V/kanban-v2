@@ -29,6 +29,11 @@ import {
 import { TaskCard } from "./TaskCard";
 import { useBoard } from "@/hooks/useBoard";
 import { PermissionService } from "@/lib/PermissionService";
+import {
+  SkeletonBoard,
+  SkeletonHeader,
+  SkeletonButton,
+} from "@/components/ui/Skeleton";
 import { useModalState } from "@/hooks/useModalState";
 import { useColumnData } from "@/hooks/useColumnData";
 import { useToast } from "@/contexts/ToastContext";
@@ -77,6 +82,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const [activeTask, setActiveTask] = React.useState<Task | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<TaskFilters>({});
+  const [scrollContainerRef, setScrollContainerRef] =
+    useState<HTMLDivElement | null>(null);
+  const [topScrollRef, setTopScrollRef] = useState<HTMLDivElement | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -451,11 +459,57 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [board]
   );
 
+  // Sync scrolling between top scrollbar and content
+  const handleTopScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      if (scrollContainerRef) {
+        scrollContainerRef.scrollLeft = e.currentTarget.scrollLeft;
+      }
+    },
+    [scrollContainerRef]
+  );
+
+  const handleContentScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      if (topScrollRef) {
+        topScrollRef.scrollLeft = e.currentTarget.scrollLeft;
+      }
+    },
+    [topScrollRef]
+  );
+
   const renderContent = useMemo(() => {
     if (loading) {
       return (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="flex flex-col h-screen overflow-y-hidden">
+          {/* Skeleton Board Header */}
+          <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <SkeletonButton className="w-12" />
+              <div className="w-7 h-7 bg-gray-200 rounded-sm animate-shimmer bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]"></div>
+              <div>
+                <SkeletonHeader className="w-48 mb-2" />
+                <div className="w-32 h-3 bg-gray-200 rounded animate-shimmer bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]"></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <SkeletonButton className="w-20" />
+              <SkeletonButton className="w-24" />
+              <div className="w-8 h-8 bg-gray-200 rounded-full animate-shimmer bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]"></div>
+            </div>
+          </header>
+
+          {/* Skeleton Kanban Board */}
+          <div className="flex-1 bg-gray-50">
+            <SkeletonBoard />
+          </div>
+
+          {/* Skeleton Bottom Scrollbar */}
+          <div className="bg-white border-t border-gray-200 px-4 sm:px-6">
+            <div className="py-2">
+              <div className="w-full h-3 bg-gray-200 rounded-full animate-shimmer bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%]"></div>
+            </div>
+          </div>
         </div>
       );
     }
@@ -513,7 +567,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden bg-gray-50 horizontal-scrollbar">
+        <div
+          ref={setScrollContainerRef}
+          className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden bg-gray-50 content-scrollbar"
+          onScroll={handleContentScroll}
+        >
           <div className="flex gap-3 sm:gap-4 p-4 sm:p-6 h-full min-w-max">
             {filteredColumnData.map(({ column, tasks }) => (
               <Column
@@ -539,6 +597,27 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* Bottom Scrollbar */}
+      <div className="bg-white border-t border-gray-200 px-4 sm:px-6">
+        <div className="py-2">
+          <div
+            ref={setTopScrollRef}
+            className="overflow-x-auto top-scrollbar"
+            onScroll={handleTopScroll}
+          >
+            <div
+              style={{
+                width:
+                  filteredColumnData.length * 320 +
+                  (filteredColumnData.length - 1) * 16 +
+                  "px",
+                height: "1px",
+              }}
+            ></div>
+          </div>
+        </div>
+      </div>
 
       {/* Task Modal */}
       <TaskModal
