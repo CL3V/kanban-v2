@@ -36,20 +36,8 @@ export const BoardDetailsManagement: React.FC<BoardDetailsManagementProps> = ({
         description: description.trim(),
       };
 
-      const response = await fetch(`/api/boards/${board.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update board");
-      }
-
-      setIsEditing(false);
       await onBoardUpdate(updatedData);
+      setIsEditing(false);
     } catch (error) {
       console.error("Error updating board:", error);
       alert("Failed to update board details");

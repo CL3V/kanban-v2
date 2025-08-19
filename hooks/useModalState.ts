@@ -1,12 +1,7 @@
 import { useReducer, useCallback } from "react";
 import { Task, TaskStatus } from "@/types/kanban";
 
-export type ModalMode =
-  | "create"
-  | "view"
-  | "edit"
-  | "board-settings"
-  | "closed";
+export type ModalMode = "create" | "view" | "edit" | "closed";
 
 interface ModalState {
   mode: ModalMode;
@@ -20,7 +15,6 @@ type ModalAction =
   | { type: "OPEN_VIEW_TASK"; payload: { task: Task } }
   | { type: "OPEN_EDIT_TASK"; payload: { task: Task } }
   | { type: "SWITCH_TO_EDIT" }
-  | { type: "OPEN_BOARD_SETTINGS" }
   | { type: "CLOSE_MODAL" };
 
 const initialState: ModalState = {
@@ -65,14 +59,6 @@ function modalReducer(state: ModalState, action: ModalAction): ModalState {
       }
       return state;
 
-    case "OPEN_BOARD_SETTINGS":
-      return {
-        mode: "board-settings",
-        isOpen: true,
-        selectedTask: null,
-        activeColumnStatus: null,
-      };
-
     case "CLOSE_MODAL":
       return initialState;
 
@@ -100,10 +86,6 @@ export const useModalState = () => {
     dispatch({ type: "SWITCH_TO_EDIT" });
   }, []);
 
-  const openBoardSettings = useCallback(() => {
-    dispatch({ type: "OPEN_BOARD_SETTINGS" });
-  }, []);
-
   const closeModal = useCallback(() => {
     dispatch({ type: "CLOSE_MODAL" });
   }, []);
@@ -114,12 +96,10 @@ export const useModalState = () => {
     openViewTask,
     openEditTask,
     switchToEdit,
-    openBoardSettings,
     closeModal,
     // Derived states
     isTaskModalOpen:
       state.isOpen && ["create", "view", "edit"].includes(state.mode),
-    isBoardSettingsOpen: state.isOpen && state.mode === "board-settings",
     isEditing: state.mode === "edit",
     isCreating: state.mode === "create",
   };

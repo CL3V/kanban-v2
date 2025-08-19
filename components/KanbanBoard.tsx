@@ -10,8 +10,9 @@ import {
 import { Button } from "./ui/Button";
 import { Column } from "./Column";
 import { TaskModal } from "./TaskModal";
-import { BoardSettings } from "./BoardSettings";
 import { BoardHeader, TaskFilters } from "./BoardHeader";
+import { ColumnManagement } from "./ColumnManagement";
+import { Modal } from "./ui/Modal";
 import { BoardStats } from "./BoardStats";
 import {
   DndContext,
@@ -53,7 +54,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     board,
     loading,
     error,
-    fetchBoard,
     createTask,
     updateTask,
     deleteTask,
@@ -65,7 +65,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   const {
     mode,
     isTaskModalOpen,
-    isBoardSettingsOpen,
     selectedTask,
     activeColumnStatus,
     isEditing,
@@ -74,7 +73,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     openViewTask,
     openEditTask,
     switchToEdit,
-    openBoardSettings,
     closeModal,
   } = useModalState();
 
@@ -86,6 +84,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     useState<HTMLDivElement | null>(null);
   const [topScrollRef, setTopScrollRef] = useState<HTMLDivElement | null>(null);
   const [needsHorizontalScroll, setNeedsHorizontalScroll] = useState(false);
+  const [showColumnManagement, setShowColumnManagement] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -439,6 +438,11 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [boardId, currentUser, board, updateBoardState]
   );
 
+  const handleColumnsUpdate = useCallback(() => {
+    // This will be handled by the API calls within ColumnManagement
+    // The component uses optimistic updates via onBoardStateUpdate
+  }, []);
+
   // Custom collision detection that prioritizes column drop zones
   const customCollisionDetection = useCallback(
     (args: any) => {
@@ -564,7 +568,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-y-hidden">
+    <div className="flex flex-col h-full overflow-y-hidden bg-white">
       {/* Board Header */}
       <BoardHeader
         board={board!}
@@ -572,16 +576,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onOpenCreateTask={() =>
           openCreateTask(board!.columns[0]?.status || "todo")
         }
-        onOpenBoardSettings={openBoardSettings}
+        onOpenColumnManagement={() => setShowColumnManagement(true)}
         onSearchChange={handleSearchChange}
         onFiltersChange={handleFiltersChange}
         canCreateTask={
           currentUser ? PermissionService.canCreateTask(currentUser) : false
         }
-        canManageBoard={
-          currentUser
-            ? PermissionService.canManageProjectMembers(currentUser)
-            : false
+        canManageColumns={
+          currentUser ? PermissionService.canManageColumns(currentUser) : false
         }
       />
 
@@ -671,15 +673,20 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         onDeleteComment={handleDeleteComment}
       />
 
-      {/* Board Settings Modal */}
-      <BoardSettings
-        board={board!}
-        onBoardUpdate={updateBoard}
-        onBoardStateUpdate={updateBoardState}
-        isOpen={isBoardSettingsOpen}
-        onClose={closeModal}
-        currentUser={currentUser}
-      />
+      {/* Column Management Modal */}
+      <Modal
+        isOpen={showColumnManagement}
+        onClose={() => setShowColumnManagement(false)}
+        title="Manage Board Columns"
+        size="lg"
+      >
+        <ColumnManagement
+          boardId={boardId}
+          columns={board?.columns || []}
+          onColumnsUpdate={handleColumnsUpdate}
+          onBoardStateUpdate={updateBoardState}
+        />
+      </Modal>
     </div>
   );
 };

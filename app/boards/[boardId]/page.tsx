@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { Sidebar, SidebarView } from "@/components/Sidebar";
+import { Roadmap } from "@/components/Roadmap";
+import { Settings } from "@/components/Settings";
+import { Reports } from "@/components/Reports";
 import { UserSelector } from "@/components/UserSelector";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft } from "lucide-react";
@@ -23,6 +27,7 @@ export default function BoardPage({ params }: BoardPageProps) {
   const [loading, setLoading] = useState(true);
   const [membersLoading, setMembersLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
+  const [activeView, setActiveView] = useState<SidebarView>("kanban");
 
   useEffect(() => {
     params.then((resolvedParams) => {
@@ -107,15 +112,35 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex h-screen bg-gray-50">
+        <div className="w-64 bg-white border-r border-gray-200 animate-pulse">
+          <div className="p-6 border-b border-gray-200">
+            <div className="h-4 bg-gray-200 rounded mb-4"></div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gray-200 rounded"></div>
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+              </div>
+            </div>
+          </div>
+          <div className="p-4">
+            <div className="space-y-2">
+              <div className="h-8 bg-gray-200 rounded"></div>
+              <div className="h-8 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
       </div>
     );
   }
 
   if (!board) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-50 flex items-center justify-center">
+      <div className="flex h-screen bg-gray-50 items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Board not found
@@ -134,7 +159,7 @@ export default function BoardPage({ params }: BoardPageProps) {
   // Check access permission after user is selected
   if (currentUser && board && !canAccessBoard) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-50 flex items-center justify-center">
+      <div className="flex h-screen bg-gray-50 items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Access Denied
@@ -153,8 +178,62 @@ export default function BoardPage({ params }: BoardPageProps) {
     );
   }
 
+  const handleBoardUpdate = async (boardData: Partial<Board>) => {
+    try {
+      const response = await fetch(`/api/boards/${boardId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(boardData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update board");
+      }
+
+      const updatedBoard = await response.json();
+      setBoard(updatedBoard);
+    } catch (error) {
+      console.error("Error updating board:", error);
+      alert("Failed to update board");
+    }
+  };
+
+  const handleBoardStateUpdate = (updater: (board: Board) => Board) => {
+    if (board) {
+      const updatedBoard = updater(board);
+      setBoard(updatedBoard);
+    }
+  };
+
+  const renderMainContent = () => {
+    if (!currentUser) return null;
+
+    switch (activeView) {
+      case "kanban":
+        return <KanbanBoard boardId={boardId} currentUser={currentUser} />;
+      case "roadmap":
+        return <Roadmap board={board!} currentUser={currentUser} />;
+      case "settings":
+        return (
+          <Settings
+            board={board!}
+            currentUser={currentUser}
+            onBoardUpdate={handleBoardUpdate}
+            onBoardStateUpdate={handleBoardStateUpdate}
+            onRefresh={fetchBoard}
+          />
+        );
+      case "reports":
+        return <Reports board={board!} currentUser={currentUser} />;
+      default:
+        return <KanbanBoard boardId={boardId} currentUser={currentUser} />;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-50">
+    <div className="flex h-screen bg-gray-50">
       {/* User Selector Modal */}
       <UserSelector
         isOpen={showUserSelector}
@@ -164,10 +243,19 @@ export default function BoardPage({ params }: BoardPageProps) {
         loading={membersLoading}
       />
 
-      {/* Kanban Board with integrated header */}
-      {currentUser && (
-        <KanbanBoard boardId={boardId} currentUser={currentUser} />
+      {/* Sidebar */}
+      {currentUser && board && (
+        <Sidebar
+          activeView={activeView}
+          onViewChange={setActiveView}
+          boardTitle={board.title}
+        />
       )}
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {currentUser && renderMainContent()}
+      </div>
     </div>
   );
 }

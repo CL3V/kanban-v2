@@ -24,7 +24,51 @@ import {
   Edit,
   MessageCircle,
   Send,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUp,
+  Minus,
 } from "lucide-react";
+
+// Triple chevron component for urgent priority
+const TripleChevronUp = ({ className }: { className: string }) => (
+  <div className={`relative ${className}`}>
+    <ChevronUp className="h-3 w-3 absolute" style={{ top: "-4px" }} />
+    <ChevronUp className="h-3 w-3 absolute" style={{ top: "-2px" }} />
+    <ChevronUp className="h-3 w-3 absolute" style={{ top: "0px" }} />
+  </div>
+);
+
+// Priority display component
+const PriorityOption = ({
+  priority,
+  label,
+}: {
+  priority: string;
+  label: string;
+}) => {
+  const getIcon = () => {
+    switch (priority) {
+      case "low":
+        return <ChevronDown className="h-4 w-4 text-green-600" />;
+      case "medium":
+        return <Minus className="h-4 w-4 text-yellow-600" />;
+      case "high":
+        return <ChevronsUp className="h-4 w-4 text-orange-600" />;
+      case "urgent":
+        return <TripleChevronUp className="h-4 w-4 text-red-600" />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {getIcon()}
+      <span>{label}</span>
+    </div>
+  );
+};
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -323,27 +367,51 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             >
               Priority
             </label>
-            <select
-              id="priority"
-              value={formData.priority}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  priority: e.target.value as TaskPriority,
-                }))
-              }
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                isEditing || !task
-                  ? "border-secondary-300 bg-white"
-                  : "border-secondary-200 bg-secondary-50"
-              }`}
-              disabled={!isEditing && !!task}
-            >
-              <option value="low">🟢 Low</option>
-              <option value="medium">🟡 Medium</option>
-              <option value="high">🟠 High</option>
-              <option value="urgent">🔴 Urgent</option>
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-left flex items-center justify-between ${
+                  isEditing || !task
+                    ? "border-secondary-300 bg-white"
+                    : "border-secondary-200 bg-secondary-50"
+                }`}
+                disabled={!isEditing && !!task}
+                onClick={() => {
+                  if (isEditing || !task) {
+                    const select = document.getElementById(
+                      "priority-select"
+                    ) as HTMLSelectElement;
+                    if (select) select.focus();
+                  }
+                }}
+              >
+                <PriorityOption
+                  priority={formData.priority || "medium"}
+                  label={
+                    (formData.priority || "medium").charAt(0).toUpperCase() +
+                    (formData.priority || "medium").slice(1)
+                  }
+                />
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </button>
+              <select
+                id="priority-select"
+                value={formData.priority || "medium"}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    priority: e.target.value as TaskPriority,
+                  }))
+                }
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={!isEditing && !!task}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
           </div>
 
           {columns.length > 0 &&

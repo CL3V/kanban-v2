@@ -97,6 +97,79 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ boardId: string }> }
+) {
+  try {
+    const { boardId } = await params;
+    console.log("Updating board:", boardId);
+
+    const body: UpdateBoardRequest = await request.json();
+    console.log("Update request body:", body);
+
+    const existingBoard = await S3Service.getBoard(boardId);
+    console.log("Existing board found:", !!existingBoard);
+
+    if (!existingBoard) {
+      return NextResponse.json({ error: "Board not found" }, { status: 404 });
+    }
+
+    // Validate that the board has required fields
+    if (!existingBoard.id) {
+      console.error("Existing board missing ID");
+      return NextResponse.json(
+        { error: "Board data corrupted - missing ID" },
+        { status: 500 }
+      );
+    }
+
+    const updatedBoard = {
+      ...existingBoard,
+      ...body,
+      id: existingBoard.id, // Ensure ID is preserved
+      updatedAt: new Date().toISOString(),
+    };
+
+    console.log("Prepared updated board:", {
+      id: updatedBoard.id,
+      title: updatedBoard.title,
+      description: updatedBoard.description,
+      keys: Object.keys(updatedBoard),
+    });
+
+    // Test serialization before sending to S3
+    try {
+      JSON.stringify(updatedBoard);
+      console.log("Board serialization test passed");
+    } catch (serError) {
+      console.error("Board serialization failed:", serError);
+      return NextResponse.json(
+        { error: "Board data contains non-serializable content" },
+        { status: 400 }
+      );
+    }
+
+    await S3Service.updateBoard(updatedBoard);
+    console.log("Board updated successfully");
+
+    return NextResponse.json(updatedBoard);
+  } catch (error) {
+    console.error("Error updating board - detailed:", {
+      name: error instanceof Error ? error.name : "Unknown",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    return NextResponse.json(
+      {
+        error: "Failed to update board",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ boardId: string }> }

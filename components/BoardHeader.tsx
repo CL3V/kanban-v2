@@ -10,6 +10,7 @@ import {
   Search,
   Filter,
   ChevronDown,
+  Columns,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -24,22 +25,22 @@ interface BoardHeaderProps {
   board: Board;
   onUpdateBoard: (boardData: Partial<Board>) => Promise<void>;
   onOpenCreateTask: () => void;
-  onOpenBoardSettings: () => void;
+  onOpenColumnManagement?: () => void;
   onSearchChange?: (searchTerm: string) => void;
   onFiltersChange?: (filters: TaskFilters) => void;
   canCreateTask?: boolean;
-  canManageBoard?: boolean;
+  canManageColumns?: boolean;
 }
 
 export const BoardHeader: React.FC<BoardHeaderProps> = ({
   board,
   onUpdateBoard,
   onOpenCreateTask,
-  onOpenBoardSettings,
+  onOpenColumnManagement,
   onSearchChange,
   onFiltersChange,
   canCreateTask = true,
-  canManageBoard = true,
+  canManageColumns = false,
 }) => {
   // Title is read-only in header
   const [searchTerm, setSearchTerm] = useState("");
@@ -147,38 +148,10 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
   }, [onFiltersChange]);
 
   return (
-    <div className="bg-white border-b border-gray-200">
+    <div>
       <div className="px-6 py-4">
         {/* Main Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-
-            <Image
-              src="/images/juke-logo.svg"
-              alt="Juke Logo"
-              width={28}
-              height={28}
-              className="rounded-sm"
-              priority
-            />
-
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                {board.title}
-              </h1>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            {/* Board Settings moved to be beside Add Task button */}
-          </div>
-        </div>
+        <div className="flex items-center justify-between mb-4"></div>
 
         {/* Search and Team */}
         <div className="flex items-center justify-between">
@@ -357,17 +330,17 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* Board Settings Icon Button */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onOpenBoardSettings}
-              className="h-10 w-10 text-secondary-600 hover:text-secondary-700 hover:bg-secondary-50"
-              title="Board Settings"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-
+            {canManageColumns && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenColumnManagement}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              >
+                <Columns className="h-4 w-4" />
+                Manage Columns
+              </Button>
+            )}
             {canCreateTask && (
               <Button
                 onClick={onOpenCreateTask}
