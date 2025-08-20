@@ -59,7 +59,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
         {/* Loading Spinner */}
         <div className="mt-8">
-          <div className="w-8 h-8 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+          <div className="animate-spin rounded-full w-8 h-8 border-b-2 border-blue-600 mx-auto"></div>
         </div>
       </div>
     </div>

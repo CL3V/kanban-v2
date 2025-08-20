@@ -35,6 +35,7 @@ import {
 import { useModalState } from "@/hooks/useModalState";
 import { useColumnData } from "@/hooks/useColumnData";
 import { useToast } from "@/contexts/ToastContext";
+import { useCSRF } from "@/hooks/useCSRF";
 import { Member } from "@/types/kanban";
 
 interface KanbanBoardProps {
@@ -47,6 +48,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   currentUser,
 }) => {
   const { showSuccess, showError } = useToast();
+  const { secureApiCall } = useCSRF();
   const {
     board,
     loading,
@@ -336,7 +338,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       if (!currentUser || !board) return;
 
       try {
-        const response = await fetch(
+        const response = await secureApiCall(
           `/api/boards/${boardId}/tasks/${taskId}/comments`,
           {
             method: "POST",
@@ -387,7 +389,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         alert("Failed to add comment");
       }
     },
-    [boardId, currentUser, board, updateBoardState]
+    [boardId, currentUser, board, updateBoardState, secureApiCall]
   );
 
   const handleDeleteComment = React.useCallback(
@@ -395,7 +397,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
       if (!currentUser || !board) return;
 
       try {
-        const response = await fetch(
+        const response = await secureApiCall(
           `/api/boards/${boardId}/tasks/${taskId}/comments?commentId=${commentId}`,
           {
             method: "DELETE",
@@ -434,7 +436,60 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         alert("Failed to delete comment");
       }
     },
-    [boardId, currentUser, board, updateBoardState]
+    [boardId, currentUser, board, updateBoardState, secureApiCall]
+  );
+
+  const handleUpdateComment = React.useCallback(
+    async (taskId: string, commentId: string, content: string) => {
+      if (!currentUser || !board) return;
+
+      try {
+        const response = await secureApiCall(
+          `/api/boards/${boardId}/tasks/${taskId}/comments`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              commentId,
+              content,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("API Error Response:", errorData);
+          throw new Error(
+            errorData.details || errorData.error || "Failed to update comment"
+          );
+        }
+
+        // Update the task by modifying the comment using optimistic update
+        updateBoardState((prevBoard) => {
+          const updatedBoard = { ...prevBoard };
+          const task = updatedBoard.tasks[taskId];
+
+          if (task && task.comments) {
+            updatedBoard.tasks[taskId] = {
+              ...task,
+              comments: task.comments.map((comment) =>
+                comment.id === commentId
+                  ? { ...comment, content, updatedAt: new Date().toISOString() }
+                  : comment
+              ),
+            };
+          }
+
+          return updatedBoard;
+        });
+      } catch (error) {
+        console.error("Error updating comment:", error);
+        alert("Failed to update comment");
+      }
+    },
+    [boardId, currentUser, board, updateBoardState, secureApiCall]
   );
 
   const handleColumnsUpdate = React.useCallback(() => {
@@ -669,6 +724,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         currentUser={currentUser}
         onAddComment={handleAddComment}
         onDeleteComment={handleDeleteComment}
+        onUpdateComment={handleUpdateComment}
       />
 
       {/* Column Management Modal */}

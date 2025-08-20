@@ -75,7 +75,7 @@ export async function PUT(
 
     // Sanitize text fields and filter out undefined values
     const sanitizedData: any = {};
-    
+
     // Only include fields that are provided
     if (validatedData.title !== undefined) {
       sanitizedData.title = sanitizeHtml(validatedData.title);

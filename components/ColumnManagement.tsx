@@ -125,6 +125,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
   const { showSuccess, showError } = useToast();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingColumn, setEditingColumn] = React.useState<Column | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [formData, setFormData] = React.useState({
     title: "",
     status: "",
@@ -153,6 +154,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
       color: "#3b82f6",
     });
     setEditingColumn(null);
+    setIsSubmitting(false);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -232,6 +234,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
     e.preventDefault();
     if (!formData.title.trim()) return;
 
+    setIsSubmitting(true);
     try {
       const submitData = {
         ...formData,
@@ -296,6 +299,8 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
           ? error.message
           : `Failed to ${editingColumn ? "update" : "add"} column`
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -589,6 +594,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
             <Button
               type="button"
               variant="outline"
+              disabled={isSubmitting}
               onClick={() => {
                 setIsModalOpen(false);
                 resetForm();
@@ -596,8 +602,20 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={!formData.title.trim()}>
-              {editingColumn ? "Update Column" : "Add Column"}
+            <Button
+              type="submit"
+              disabled={!formData.title.trim() || isSubmitting}
+            >
+              {isSubmitting && (
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+              )}
+              {isSubmitting
+                ? editingColumn
+                  ? "Updating..."
+                  : "Adding..."
+                : editingColumn
+                ? "Update Column"
+                : "Add Column"}
             </Button>
           </div>
         </form>

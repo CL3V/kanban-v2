@@ -6,6 +6,7 @@ import {
   UpdateTaskRequest,
   TaskStatus,
 } from "@/types/kanban";
+import { useCSRF } from "./useCSRF";
 
 interface UseBoardState {
   board: Board | null;
@@ -31,6 +32,7 @@ export const useBoard = (boardId: string): UseBoardState & UseBoardActions => {
   const [board, setBoard] = useState<Board | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { secureApiCall } = useCSRF();
 
   const fetchBoard = useCallback(async () => {
     try {
@@ -57,7 +59,7 @@ export const useBoard = (boardId: string): UseBoardState & UseBoardActions => {
       if (!board) return;
 
       try {
-        const response = await fetch(`/api/boards/${boardId}/tasks`, {
+        const response = await secureApiCall(`/api/boards/${boardId}/tasks`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -102,19 +104,22 @@ export const useBoard = (boardId: string): UseBoardState & UseBoardActions => {
         throw err;
       }
     },
-    [boardId, board, fetchBoard]
+    [boardId, board, fetchBoard, secureApiCall]
   );
 
   const updateTask = useCallback(
     async (taskId: string, taskData: UpdateTaskRequest) => {
       try {
-        const response = await fetch(`/api/boards/${boardId}/tasks/${taskId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(taskData),
-        });
+        const response = await secureApiCall(
+          `/api/boards/${boardId}/tasks/${taskId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(taskData),
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Failed to update task");
@@ -168,15 +173,18 @@ export const useBoard = (boardId: string): UseBoardState & UseBoardActions => {
         throw err;
       }
     },
-    [boardId, fetchBoard]
+    [boardId, fetchBoard, secureApiCall]
   );
 
   const deleteTask = useCallback(
     async (taskId: string) => {
       try {
-        const response = await fetch(`/api/boards/${boardId}/tasks/${taskId}`, {
-          method: "DELETE",
-        });
+        const response = await secureApiCall(
+          `/api/boards/${boardId}/tasks/${taskId}`,
+          {
+            method: "DELETE",
+          }
+        );
 
         if (!response.ok) {
           throw new Error("Failed to delete task");
@@ -209,7 +217,7 @@ export const useBoard = (boardId: string): UseBoardState & UseBoardActions => {
         throw err;
       }
     },
-    [boardId]
+    [boardId, secureApiCall]
   );
 
   const moveTask = useCallback(
@@ -255,7 +263,7 @@ export const useBoard = (boardId: string): UseBoardState & UseBoardActions => {
       });
 
       try {
-        const response = await fetch(
+        const response = await secureApiCall(
           `/api/boards/${boardId}/tasks/${taskId}/move`,
           {
             method: "POST",
@@ -278,7 +286,7 @@ export const useBoard = (boardId: string): UseBoardState & UseBoardActions => {
         throw err;
       }
     },
-    [boardId, board, fetchBoard]
+    [boardId, board, fetchBoard, secureApiCall]
   );
 
   const updateBoard = useCallback(
@@ -291,7 +299,7 @@ export const useBoard = (boardId: string): UseBoardState & UseBoardActions => {
           throw new Error("No data provided for board update");
         }
 
-        const response = await fetch(`/api/boards/${boardId}`, {
+        const response = await secureApiCall(`/api/boards/${boardId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -317,7 +325,7 @@ export const useBoard = (boardId: string): UseBoardState & UseBoardActions => {
         throw err;
       }
     },
-    [boardId]
+    [boardId, secureApiCall]
   );
 
   const updateBoardState = useCallback((updater: (board: Board) => Board) => {
