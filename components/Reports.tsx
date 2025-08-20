@@ -13,6 +13,8 @@ import {
   Activity,
   PieChart,
   Download,
+  History,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "./ui/Button";
 
@@ -56,6 +58,23 @@ export const Reports: React.FC<ReportsProps> = ({ board, currentUser }) => {
   const [selectedDateRange, setSelectedDateRange] = useState<
     "7d" | "30d" | "90d" | "all"
   >("30d");
+
+  // Helper function to format relative time
+  const formatRelativeTime = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return "just now";
+    if (diffInSeconds < 3600)
+      return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400)
+      return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 604800)
+      return `${Math.floor(diffInSeconds / 86400)} days ago`;
+
+    return date.toLocaleDateString();
+  };
 
   // Helper function to check if task is completed (based on Done column)
   const isTaskCompleted = (task: Task) => {
@@ -150,6 +169,30 @@ export const Reports: React.FC<ReportsProps> = ({ board, currentUser }) => {
         taskCount,
         wipLimit: column.wipLimit,
         utilizationRate,
+      };
+    });
+  }, [board]);
+
+  // Get recently updated tasks
+  const recentlyUpdatedTasks = useMemo(() => {
+    const allTasks = Object.values(board.tasks || {});
+
+    // Sort tasks by updatedAt timestamp in descending order
+    const sortedTasks = allTasks
+      .filter((task) => task.updatedAt)
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      )
+      .slice(0, 10); // Get top 10 most recently updated tasks
+
+    return sortedTasks.map((task) => {
+      // Find which column the task is in
+      const column = board.columns.find((col) => col.taskIds.includes(task.id));
+      return {
+        ...task,
+        columnTitle: column?.title || "Unknown",
+        columnStatus: column?.status || "unknown",
       };
     });
   }, [board]);
@@ -504,6 +547,65 @@ export const Reports: React.FC<ReportsProps> = ({ board, currentUser }) => {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Latest Task Changes */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <History className="h-5 w-5 text-gray-600" />
+            <h3 className="text-lg font-semibold text-gray-900">
+              Latest Task Changes
+            </h3>
+          </div>
+
+          {recentlyUpdatedTasks.length === 0 ? (
+            <p className="text-sm text-gray-500">No recent task updates</p>
+          ) : (
+            <div className="space-y-3">
+              {recentlyUpdatedTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-start justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-medium text-gray-900">
+                        {task.title}
+                      </h4>
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                          task.priority === "urgent"
+                            ? "bg-red-100 text-red-800"
+                            : task.priority === "high"
+                            ? "bg-orange-100 text-orange-800"
+                            : task.priority === "medium"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
+                        {task.priority}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <span className="flex items-center gap-1">
+                        <ArrowRight className="h-3 w-3" />
+                        {task.columnTitle}
+                      </span>
+                      {task.assignee && (
+                        <span>
+                          Assigned to:{" "}
+                          {board.members[task.assignee]?.name || "Unknown"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-500 whitespace-nowrap ml-4">
+                    {formatRelativeTime(task.updatedAt)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
