@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { S3Service } from "@/lib/s3-service";
-import { Task, CreateTaskRequest } from "@/types/kanban";
 import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
+import { S3Service } from "@/lib/s3-service";
+
+import {
+  validateBoardId,
+  createTaskSchema,
+  validateRequestSize,
+  sanitizeHtml,
+} from "@/lib/validation";
+import { Task } from "@/types/kanban";
 
 export async function POST(
   request: NextRequest,
@@ -9,14 +17,24 @@ export async function POST(
 ) {
   try {
     const { boardId } = await params;
-    const body: CreateTaskRequest = await request.json();
 
-    if (!body.title) {
-      return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    const validatedBoardId = validateBoardId(boardId);
+
+    const body = await request.json();
+
+    validateRequestSize(body, 256);
+
+    const validationResult = createTaskSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: validationResult.error.flatten() },
+        { status: 400 }
+      );
     }
 
-    // Verify board exists
-    const existingBoard = await S3Service.getBoard(boardId);
+    const validatedData = validationResult.data;
+
+    const existingBoard = await S3Service.getBoard(validatedBoardId);
     if (!existingBoard) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
@@ -24,8 +42,7 @@ export async function POST(
     const taskId = uuidv4();
     const now = new Date().toISOString();
 
-    // Determine status: use requested status if it matches a board column, else first column, else 'todo'
-    const requestedStatus = body.status;
+    const requestedStatus = validatedData.status;
     const hasRequestedColumn = requestedStatus
       ? existingBoard.columns?.some((c) => c.status === requestedStatus)
       : false;
@@ -34,30 +51,55 @@ export async function POST(
 
     const newTask: Task = {
       id: taskId,
-      title: body.title,
-      description: body.description,
+      title: sanitizeHtml(validatedData.title),
+      description: validatedData.description
+        ? sanitizeHtml(validatedData.description)
+        : undefined,
       status: hasRequestedColumn
         ? (requestedStatus as any)
         : (defaultStatus as any),
-      priority: body.priority,
-      assignee: body.assignee,
-      reporter: "Current User", // In a real app, this would come from authentication
+      priority: validatedData.priority ?? "low",
+      assignee: validatedData.assignee,
+      reporter: "Current User",
       createdAt: now,
       updatedAt: now,
-      dueDate: body.dueDate,
-      tags: body.tags || [],
+      dueDate: validatedData.dueDate,
+      tags: validatedData.tags?.map((tag) => sanitizeHtml(tag)) || [],
       attachments: [],
       comments: [],
-      estimatedHours: body.estimatedHours,
+      estimatedHours: validatedData.estimatedHours,
     };
 
-    await S3Service.createTask(boardId, newTask);
+    await S3Service.createTask(validatedBoardId, newTask);
 
     return NextResponse.json(newTask, { status: 201 });
   } catch (error) {
-    console.error("Error creating task:", error);
+    if (error instanceof Error && error.message === "Invalid board ID") {
+      return NextResponse.json(
+        { error: "Invalid board ID format" },
+        { status: 400 }
+      );
+    }
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input data" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      error instanceof Error &&
+      error.message.includes("Request body too large")
+    ) {
+      return NextResponse.json(
+        { error: "Request body too large" },
+        { status: 413 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to create task" },
+      { error: "An error occurred while creating the task" },
       { status: 500 }
     );
   }

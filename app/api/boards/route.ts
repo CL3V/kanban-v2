@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { S3Service } from "@/lib/s3-service";
-import { Board, CreateBoardRequest, TaskStatus } from "@/types/kanban";
+import { Board, TaskStatus } from "@/types/kanban";
 import { v4 as uuidv4 } from "uuid";
+import {
+  createBoardSchema,
+  validateRequestSize,
+  sanitizeHtml,
+} from "@/lib/validation";
+import { z } from "zod";
 
 export async function GET() {
   try {
     const boards = await S3Service.getAllBoards();
     return NextResponse.json(boards);
   } catch (error) {
-    console.error("Error fetching boards:", error);
     return NextResponse.json(
-      { error: "Failed to fetch boards" },
+      { error: "An error occurred while fetching boards" },
       { status: 500 }
     );
   }
@@ -18,11 +23,19 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const body: CreateBoardRequest = await request.json();
+    const body = await request.json();
 
-    if (!body.title) {
-      return NextResponse.json({ error: "Title is required" }, { status: 400 });
+    validateRequestSize(body, 512);
+
+    const validationResult = createBoardSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: validationResult.error.flatten() },
+        { status: 400 }
+      );
     }
+
+    const validatedData = validationResult.data;
 
     const boardId = uuidv4();
     const now = new Date().toISOString();
@@ -58,13 +71,14 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    // Start with empty members - users will add them manually
     const defaultMembers = {};
 
     const newBoard: Board = {
       id: boardId,
-      title: body.title,
-      description: body.description,
+      title: sanitizeHtml(validatedData.title),
+      description: validatedData.description
+        ? sanitizeHtml(validatedData.description)
+        : undefined,
       columns: defaultColumns,
       tasks: {},
       members: defaultMembers,
@@ -75,7 +89,7 @@ export async function POST(request: NextRequest) {
         allowStatusChange: true,
         enableWipLimits: false,
         enableTimeTracking: true,
-        ...body.settings,
+        ...validatedData.settings,
       },
     };
 
@@ -83,9 +97,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newBoard, { status: 201 });
   } catch (error) {
-    console.error("Error creating board:", error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input data" },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to create board" },
+      { error: "An error occurred while creating the board" },
       { status: 500 }
     );
   }

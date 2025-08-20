@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MemberService } from "@/lib/member-service";
 
-// GET /api/members/[memberId] - Get a specific member
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ memberId: string }> }
@@ -16,7 +15,6 @@ export async function GET(
 
     return NextResponse.json({ member });
   } catch (error) {
-    console.error("Error fetching member:", error);
     return NextResponse.json(
       { error: "Failed to fetch member" },
       { status: 500 }
@@ -24,7 +22,6 @@ export async function GET(
   }
 }
 
-// PUT /api/members/[memberId] - Update a member
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ memberId: string }> }
@@ -40,8 +37,6 @@ export async function PUT(
       message: "Member updated successfully",
     });
   } catch (error: any) {
-    console.error("Error updating member:", error);
-
     if (error.message === "Member not found") {
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
@@ -53,7 +48,6 @@ export async function PUT(
   }
 }
 
-// DELETE /api/members/[memberId] - Delete a member
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ memberId: string }> }

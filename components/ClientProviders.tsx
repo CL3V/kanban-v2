@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { SplashScreen } from "@/components/SplashScreen";
 
@@ -11,10 +11,9 @@ interface ClientProvidersProps {
 export const ClientProviders: React.FC<ClientProvidersProps> = ({
   children,
 }) => {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = React.useState(true);
 
-  useEffect(() => {
-    // Check if this is the first visit or if we should show splash
+  React.useEffect(() => {
     const hasSeenSplash = sessionStorage.getItem("hasSeenSplash");
     if (hasSeenSplash) {
       setShowSplash(false);

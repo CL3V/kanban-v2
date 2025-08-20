@@ -1,19 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Column, Board } from "@/types/kanban";
-import { Button } from "./ui/Button";
-import { Modal } from "./ui/Modal";
-import { useToast } from "@/contexts/ToastContext";
-import {
-  Columns,
-  Plus,
-  Edit,
-  Trash2,
-  Circle,
-  Hash,
-  GripVertical,
-} from "lucide-react";
+import React from "react";
+import { Columns, Plus, Edit, Trash2, Hash, GripVertical } from "lucide-react";
 import {
   DndContext,
   DragEndEvent,
@@ -29,6 +17,11 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { arrayMove } from "@dnd-kit/sortable";
+
+import { Column, Board } from "@/types/kanban";
+import { Button } from "./ui/Button";
+import { Modal } from "./ui/Modal";
+import { useToast } from "@/contexts/ToastContext";
 
 interface ColumnManagementProps {
   boardId: string;
@@ -130,17 +123,16 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
   onBoardStateUpdate,
 }) => {
   const { showSuccess, showError } = useToast();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingColumn, setEditingColumn] = useState<Column | null>(null);
-  const [formData, setFormData] = useState({
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [editingColumn, setEditingColumn] = React.useState<Column | null>(null);
+  const [formData, setFormData] = React.useState({
     title: "",
     status: "",
     wipLimit: undefined as number | undefined,
     color: "#3b82f6" as string,
   });
-  const [localColumns, setLocalColumns] = useState(columns);
+  const [localColumns, setLocalColumns] = React.useState(columns);
 
-  // Update local columns when props change
   React.useEffect(() => {
     setLocalColumns(columns);
   }, [columns]);
@@ -177,12 +169,10 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
       return;
     }
 
-    // Update local state immediately for better UX
     const reorderedColumns = arrayMove(localColumns, oldIndex, newIndex);
     setLocalColumns(reorderedColumns);
 
     try {
-      // Send the new order to the server
       const response = await fetch(`/api/boards/${boardId}/columns/reorder`, {
         method: "POST",
         headers: {

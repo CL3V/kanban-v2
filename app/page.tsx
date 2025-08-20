@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { Plus, Users, Trash2 } from "lucide-react";
+
 import { Button } from "@/components/ui/Button";
 import { UserSelector } from "@/components/UserSelector";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -11,30 +13,19 @@ import { useToast } from "@/contexts/ToastContext";
 import {
   SkeletonCard,
   SkeletonStats,
-  SkeletonHeader,
   SkeletonButton,
 } from "@/components/ui/Skeleton";
-import {
-  Plus,
-  Folder,
-  Calendar,
-  Users,
-  Trash2,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-} from "lucide-react";
 import type { Board, Member } from "@/types/kanban";
 
 export default function HomePage() {
   const { showSuccess, showError } = useToast();
-  const [boards, setBoards] = useState<Board[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [membersLoading, setMembersLoading] = useState(true);
-  const [showUserSelector, setShowUserSelector] = useState(false);
-  const [currentUser, setCurrentUser] = useState<Member | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [deleteDialog, setDeleteDialog] = useState<{
+  const [boards, setBoards] = React.useState<Board[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [membersLoading, setMembersLoading] = React.useState(true);
+  const [showUserSelector, setShowUserSelector] = React.useState(false);
+  const [currentUser, setCurrentUser] = React.useState<Member | null>(null);
+  const [members, setMembers] = React.useState<Member[]>([]);
+  const [deleteDialog, setDeleteDialog] = React.useState<{
     isOpen: boolean;
     boardId: string;
     boardTitle: string;
@@ -43,9 +34,9 @@ export default function HomePage() {
     boardId: "",
     boardTitle: "",
   });
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchBoards();
     fetchMembers();
     checkCurrentUser();
@@ -195,7 +186,7 @@ export default function HomePage() {
     };
   };
 
-  const filteredBoards = useMemo(() => {
+  const filteredBoards = React.useMemo(() => {
     return boards.filter((board) => {
       if (!currentUser) return false;
       if (currentUser.role !== "member") return true;
@@ -206,7 +197,7 @@ export default function HomePage() {
 
   // Members stay on the dashboard even if they have no projects
 
-  const stats = useMemo(() => {
+  const stats = React.useMemo(() => {
     const source = currentUser?.role === "member" ? filteredBoards : boards;
     const totalTasks = source.reduce(
       (acc, b) => acc + Object.keys(b.tasks || {}).length,

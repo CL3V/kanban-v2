@@ -34,9 +34,8 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   onBoardStateUpdate,
 }) => {
   const { showSuccess, showError } = useToast();
-  // In this simplified setup, we read currentUser from localStorage on mount
-  const [currentUser, setCurrentUser] = useState<Member | null>(null);
-  useEffect(() => {
+  const [currentUser, setCurrentUser] = React.useState<Member | null>(null);
+  React.useEffect(() => {
     try {
       const saved = localStorage.getItem("currentUser");
       if (saved) setCurrentUser(JSON.parse(saved));

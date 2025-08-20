@@ -9,13 +9,11 @@ export async function PUT(
     const { boardId, columnId } = await params;
     const body = await request.json();
 
-    // Verify board exists
     const existingBoard = await S3Service.getBoard(boardId);
     if (!existingBoard) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    // Find column
     const columnIndex = existingBoard.columns.findIndex(
       (col) => col.id === columnId
     );
@@ -23,11 +21,10 @@ export async function PUT(
       return NextResponse.json({ error: "Column not found" }, { status: 404 });
     }
 
-    // Update column
     const updatedColumn = {
       ...existingBoard.columns[columnIndex],
       ...body,
-      id: columnId, // Ensure ID doesn't change
+      id: columnId,
     };
 
     existingBoard.columns[columnIndex] = updatedColumn;
@@ -52,13 +49,11 @@ export async function DELETE(
   try {
     const { boardId, columnId } = await params;
 
-    // Verify board exists
     const existingBoard = await S3Service.getBoard(boardId);
     if (!existingBoard) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    // Find column
     const columnIndex = existingBoard.columns.findIndex(
       (col) => col.id === columnId
     );
@@ -68,7 +63,6 @@ export async function DELETE(
 
     const column = existingBoard.columns[columnIndex];
 
-    // Check if column has tasks
     if (column.taskIds.length > 0) {
       return NextResponse.json(
         {
@@ -78,7 +72,6 @@ export async function DELETE(
       );
     }
 
-    // Remove column
     existingBoard.columns.splice(columnIndex, 1);
     existingBoard.updatedAt = new Date().toISOString();
 

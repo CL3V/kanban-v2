@@ -12,15 +12,12 @@ export async function POST(
     const { boardId } = await params;
     const body = await request.json();
 
-    // Verify board exists
     const existingBoard = await S3Service.getBoard(boardId);
     if (!existingBoard) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    // Check if we're adding an existing member by ID
     if (body.memberId) {
-      // Adding existing global member to board
       const globalMembers = await MemberService.getAllMembers();
       const member = globalMembers.find((m: Member) => m.id === body.memberId);
 
@@ -31,7 +28,6 @@ export async function POST(
         );
       }
 
-      // Check if member is already in the board
       if (existingBoard.members && existingBoard.members[body.memberId]) {
         return NextResponse.json(
           { error: "Member is already in this board" },
@@ -39,7 +35,6 @@ export async function POST(
         );
       }
 
-      // Add member to board
       if (!existingBoard.members) {
         existingBoard.members = {};
       }
@@ -51,7 +46,6 @@ export async function POST(
       return NextResponse.json(member, { status: 201 });
     }
 
-    // Creating new member (existing functionality)
     if (!body.name || !body.email) {
       return NextResponse.json(
         { error: "Name and email are required" },
@@ -73,7 +67,6 @@ export async function POST(
       "#84CC16",
     ];
 
-    // Pick a color that's not already used
     const usedColors = Object.values(existingBoard.members || {}).map(
       (m) => m.color
     );
@@ -93,7 +86,6 @@ export async function POST(
       color: selectedColor,
     };
 
-    // Add member to board
     if (!existingBoard.members) {
       existingBoard.members = {};
     }
@@ -104,7 +96,6 @@ export async function POST(
 
     return NextResponse.json(newMember, { status: 201 });
   } catch (error) {
-    console.error("Error adding member:", error);
     return NextResponse.json(
       { error: "Failed to add member" },
       { status: 500 }

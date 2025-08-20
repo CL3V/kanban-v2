@@ -23,7 +23,6 @@ export async function POST(
 
     return NextResponse.json(updatedTask);
   } catch (error) {
-    console.error("Error moving task:", error);
     return NextResponse.json({ error: "Failed to move task" }, { status: 500 });
   }
 }

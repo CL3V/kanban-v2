@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
+import Link from "next/link";
+
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { Sidebar, SidebarView } from "@/components/Sidebar";
 import { Roadmap } from "@/components/Roadmap";
@@ -9,7 +11,6 @@ import { Reports } from "@/components/Reports";
 import { UserSelector } from "@/components/UserSelector";
 import { Button } from "@/components/ui/Button";
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { Board, Member } from "@/types/kanban";
 import { PermissionService } from "@/lib/PermissionService";
 
@@ -20,22 +21,22 @@ interface BoardPageProps {
 }
 
 export default function BoardPage({ params }: BoardPageProps) {
-  const [boardId, setBoardId] = useState<string>("");
-  const [currentUser, setCurrentUser] = useState<Member | null>(null);
-  const [showUserSelector, setShowUserSelector] = useState(false);
-  const [board, setBoard] = useState<Board | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [membersLoading, setMembersLoading] = useState(true);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [activeView, setActiveView] = useState<SidebarView>("kanban");
+  const [boardId, setBoardId] = React.useState<string>("");
+  const [currentUser, setCurrentUser] = React.useState<Member | null>(null);
+  const [showUserSelector, setShowUserSelector] = React.useState(false);
+  const [board, setBoard] = React.useState<Board | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [membersLoading, setMembersLoading] = React.useState(true);
+  const [members, setMembers] = React.useState<Member[]>([]);
+  const [activeView, setActiveView] = React.useState<SidebarView>("kanban");
 
-  useEffect(() => {
+  React.useEffect(() => {
     params.then((resolvedParams) => {
       setBoardId(resolvedParams.boardId);
     });
   }, [params]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (boardId) {
       fetchBoard();
       fetchMembers();
@@ -51,34 +52,30 @@ export default function BoardPage({ params }: BoardPageProps) {
         setMembers(data.members || []);
       }
     } catch (error) {
-      console.error("Error fetching members:", error);
+      console.error("Error fetching members");
     } finally {
       setMembersLoading(false);
     }
   };
 
-  useEffect(() => {
-    // Check for cached user
+  React.useEffect(() => {
     const cachedUser = localStorage.getItem("currentUser");
     if (cachedUser) {
       try {
         const user = JSON.parse(cachedUser);
         setCurrentUser(user);
       } catch (error) {
-        console.error("Error parsing cached user:", error);
         localStorage.removeItem("currentUser");
       }
     }
   }, []);
 
-  useEffect(() => {
-    // Show user selector if we have a board but no current user
+  React.useEffect(() => {
     if (board && !currentUser && !loading) {
       setShowUserSelector(true);
     }
   }, [board, currentUser, loading]);
 
-  // Check if current user can access this board
   const canAccessBoard =
     currentUser && board
       ? PermissionService.canAccessProject(
@@ -95,11 +92,10 @@ export default function BoardPage({ params }: BoardPageProps) {
         const boardData = await response.json();
         setBoard(boardData);
 
-        // Set page title with board name
         document.title = `${boardData.title} | Juke`;
       }
     } catch (error) {
-      console.error("Error fetching board:", error);
+      console.error("Error fetching board");
     } finally {
       setLoading(false);
     }
@@ -156,7 +152,6 @@ export default function BoardPage({ params }: BoardPageProps) {
     );
   }
 
-  // Check access permission after user is selected
   if (currentUser && board && !canAccessBoard) {
     return (
       <div className="flex h-screen bg-gray-50 items-center justify-center">
@@ -195,7 +190,6 @@ export default function BoardPage({ params }: BoardPageProps) {
       const updatedBoard = await response.json();
       setBoard(updatedBoard);
     } catch (error) {
-      console.error("Error updating board:", error);
       alert("Failed to update board");
     }
   };
@@ -234,7 +228,6 @@ export default function BoardPage({ params }: BoardPageProps) {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* User Selector Modal */}
       <UserSelector
         isOpen={showUserSelector}
         onUserSelect={handleUserSelect}
@@ -243,7 +236,6 @@ export default function BoardPage({ params }: BoardPageProps) {
         loading={membersLoading}
       />
 
-      {/* Sidebar */}
       {currentUser && board && (
         <Sidebar
           activeView={activeView}
@@ -252,7 +244,6 @@ export default function BoardPage({ params }: BoardPageProps) {
         />
       )}
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {currentUser && renderMainContent()}
       </div>

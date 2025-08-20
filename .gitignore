@@ -47,6 +47,7 @@ next-env.d.ts
 .idea/
 *.swp
 *.swo
+*.md
 
 # OS
 Thumbs.db

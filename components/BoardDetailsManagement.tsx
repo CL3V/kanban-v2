@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
+import { Save, Edit3 } from "lucide-react";
+
 import { Board, Member } from "@/types/kanban";
 import { Button } from "./ui/Button";
-import { Save, Edit3 } from "lucide-react";
 
 interface BoardDetailsManagementProps {
   board: Board;
@@ -16,12 +17,11 @@ export const BoardDetailsManagement: React.FC<BoardDetailsManagementProps> = ({
   onBoardUpdate,
   currentUser,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [title, setTitle] = useState(board.title);
-  const [description, setDescription] = useState(board.description || "");
-  const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [title, setTitle] = React.useState(board.title);
+  const [description, setDescription] = React.useState(board.description || "");
+  const [loading, setLoading] = React.useState(false);
 
-  // Only admins and project managers can edit board details
   const canEditBoard = !!(
     currentUser &&
     (currentUser.role === "admin" || currentUser.role === "project_manager")
@@ -39,7 +39,6 @@ export const BoardDetailsManagement: React.FC<BoardDetailsManagementProps> = ({
       await onBoardUpdate(updatedData);
       setIsEditing(false);
     } catch (error) {
-      console.error("Error updating board:", error);
       alert("Failed to update board details");
     } finally {
       setLoading(false);

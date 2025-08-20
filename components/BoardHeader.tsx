@@ -1,19 +1,9 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { Board, Task, TaskPriority, Member } from "@/types/kanban";
+import React from "react";
+import { Plus, Search, Filter, ChevronDown, Columns } from "lucide-react";
+
+import { Board, TaskPriority } from "@/types/kanban";
 import { Button } from "./ui/Button";
-import { Modal } from "./ui/Modal";
 import { UserAvatar } from "./UserAvatar";
-import {
-  Settings,
-  Plus,
-  ArrowLeft,
-  Search,
-  Filter,
-  ChevronDown,
-  Columns,
-} from "lucide-react";
-import Link from "next/link";
-import Image from "next/image";
 
 export interface TaskFilters {
   assignee?: string;
@@ -34,7 +24,6 @@ interface BoardHeaderProps {
 
 export const BoardHeader: React.FC<BoardHeaderProps> = ({
   board,
-  onUpdateBoard,
   onOpenCreateTask,
   onOpenColumnManagement,
   onSearchChange,
@@ -42,13 +31,11 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
   canCreateTask = true,
   canManageColumns = false,
 }) => {
-  // Title is read-only in header
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<TaskFilters>({});
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [showFilters, setShowFilters] = React.useState(false);
+  const [filters, setFilters] = React.useState<TaskFilters>({});
 
-  // Persist filters/search per board
-  useEffect(() => {
+  React.useEffect(() => {
     try {
       const key = `kanban:boardFilters:${board.id}`;
       const raw = localStorage.getItem(key);
@@ -66,10 +53,9 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
     } catch (e) {
       console.error("Failed to restore board filters from cache", e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [board.id]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     try {
       const key = `kanban:boardFilters:${board.id}`;
       const payload = JSON.stringify({ searchTerm, filters });
@@ -79,8 +65,7 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
     }
   }, [board.id, searchTerm, filters]);
 
-  // Close filters dropdown when clicking outside
-  useEffect(() => {
+  React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (showFilters && !target.closest(".filter-dropdown")) {
@@ -94,35 +79,6 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
     };
   }, [showFilters]);
 
-  const getInitials = (name: string) => {
-    const nameParts = name.split(" ");
-    if (nameParts.length >= 2) {
-      return (nameParts[0].charAt(0) + nameParts[1].charAt(0)).toUpperCase();
-    }
-    return nameParts[0].charAt(0).toUpperCase();
-  };
-
-  const getAvatarColor = (name: string) => {
-    const colors = [
-      "#ef4444", // red
-      "#f97316", // orange
-      "#eab308", // yellow
-      "#22c55e", // green
-      "#06b6d4", // cyan
-      "#3b82f6", // blue
-      "#8b5cf6", // violet
-      "#ec4899", // pink
-      "#f59e0b", // amber
-      "#10b981", // emerald
-    ];
-    const hash = name.split("").reduce((a, b) => {
-      a = (a << 5) - a + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    return colors[Math.abs(hash) % colors.length];
-  };
-
-  // Get all unique tags from board tasks
   const getAllTags = () => {
     const allTags = new Set<string>();
     Object.values(board.tasks).forEach((task) => {
@@ -131,9 +87,7 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
     return Array.from(allTags).sort();
   };
 
-  // Editing disabled: title and description are read-only here
-
-  const handleFilterChange = useCallback(
+  const handleFilterChange = React.useCallback(
     (newFilters: TaskFilters) => {
       setFilters(newFilters);
       onFiltersChange?.(newFilters);
@@ -141,7 +95,7 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
     [onFiltersChange]
   );
 
-  const clearFilters = useCallback(() => {
+  const clearFilters = React.useCallback(() => {
     const emptyFilters: TaskFilters = {};
     setFilters(emptyFilters);
     onFiltersChange?.(emptyFilters);
@@ -150,13 +104,10 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
   return (
     <div>
       <div className="px-6 py-4">
-        {/* Main Header */}
         <div className="flex items-center justify-between mb-4"></div>
 
-        {/* Search and Team */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* Search Bar */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -171,7 +122,6 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
               />
             </div>
 
-            {/* Filter Button */}
             <div className="relative filter-dropdown">
               <Button
                 variant="outline"
@@ -197,7 +147,6 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
                 )}
               </Button>
 
-              {/* Filter Dropdown */}
               {showFilters && (
                 <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                   <div className="p-4 space-y-4">
@@ -215,7 +164,6 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
                       </Button>
                     </div>
 
-                    {/* Assignee Filter */}
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-2">
                         Assignee
@@ -239,7 +187,6 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
                       </select>
                     </div>
 
-                    {/* Priority Filter */}
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-2">
                         Priority
@@ -263,7 +210,6 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
                       </select>
                     </div>
 
-                    {/* Tags Filter */}
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-2">
                         Tags
@@ -307,7 +253,6 @@ export const BoardHeader: React.FC<BoardHeaderProps> = ({
               )}
             </div>
 
-            {/* Team Members Display */}
             <div className="flex items-center gap-1">
               {Object.values(board.members || {})
                 .slice(0, 4)

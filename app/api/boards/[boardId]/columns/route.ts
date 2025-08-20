@@ -18,13 +18,11 @@ export async function POST(
       );
     }
 
-    // Verify board exists
     const existingBoard = await S3Service.getBoard(boardId);
     if (!existingBoard) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    // Check if status already exists
     const statusExists = existingBoard.columns.some(
       (col) => col.status === body.status
     );
@@ -53,7 +51,6 @@ export async function POST(
       "#f43f5e",
     ];
 
-    // Pick a color that's not already used, or use the provided color
     const usedColors = existingBoard.columns.map((col) => col.color);
     const availableColors = colors.filter(
       (color) => !usedColors.includes(color)
@@ -76,7 +73,6 @@ export async function POST(
       wipLimit: body.wipLimit,
     };
 
-    // Add column to board
     existingBoard.columns.push(newColumn);
     existingBoard.updatedAt = new Date().toISOString();
 

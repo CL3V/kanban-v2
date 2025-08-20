@@ -24,7 +24,6 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   );
 };
 
-// Simple container-based skeleton components
 export const SkeletonCard: React.FC<{ className?: string }> = ({
   className = "",
 }) => (

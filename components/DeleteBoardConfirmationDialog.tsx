@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
+import { AlertTriangle, Trash2 } from "lucide-react";
+
 import { Modal } from "./ui/Modal";
 import { Button } from "./ui/Button";
-import { AlertTriangle, Trash2 } from "lucide-react";
 
 interface DeleteBoardConfirmationDialogProps {
   isOpen: boolean;
@@ -14,7 +15,7 @@ interface DeleteBoardConfirmationDialogProps {
 export const DeleteBoardConfirmationDialog: React.FC<
   DeleteBoardConfirmationDialogProps
 > = ({ isOpen, onClose, onConfirm, boardTitle, isDeleting = false }) => {
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = React.useState("");
   const isValid = inputValue === boardTitle;
 
   const handleConfirm = () => {
@@ -31,15 +32,12 @@ export const DeleteBoardConfirmationDialog: React.FC<
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="" size="md">
       <div className="text-center p-10">
-        {/* Warning Icon */}
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <AlertTriangle className="h-8 w-8 text-red-600" />
         </div>
 
-        {/* Title */}
         <h2 className="text-xl font-bold text-gray-900 mb-2">Delete Board</h2>
 
-        {/* Warning Message */}
         <div className="text-left bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
           <p className="text-sm text-red-800 mb-3">
             <strong>Warning:</strong> This action cannot be undone. This will
@@ -54,7 +52,6 @@ export const DeleteBoardConfirmationDialog: React.FC<
           </p>
         </div>
 
-        {/* Confirmation Input */}
         <div className="text-left mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             To confirm, type the board name <strong>"{boardTitle}"</strong>{" "}
@@ -70,7 +67,6 @@ export const DeleteBoardConfirmationDialog: React.FC<
           />
         </div>
 
-        {/* Action Buttons */}
         <div className="flex gap-3">
           <Button
             type="button"

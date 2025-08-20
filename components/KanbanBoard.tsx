@@ -1,6 +1,17 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React from "react";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  rectIntersection,
+} from "@dnd-kit/core";
+
 import {
   CreateTaskRequest,
   UpdateTaskRequest,
@@ -13,20 +24,6 @@ import { TaskModal } from "./TaskModal";
 import { BoardHeader, TaskFilters } from "./BoardHeader";
 import { ColumnManagement } from "./ColumnManagement";
 import { Modal } from "./ui/Modal";
-import { BoardStats } from "./BoardStats";
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  closestCenter,
-  rectIntersection,
-  pointerWithin,
-  getFirstCollision,
-} from "@dnd-kit/core";
 import { TaskCard } from "./TaskCard";
 import { useBoard } from "@/hooks/useBoard";
 import { PermissionService } from "@/lib/PermissionService";
@@ -78,13 +75,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
   const columnData = useColumnData(board);
   const [activeTask, setActiveTask] = React.useState<Task | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filters, setFilters] = useState<TaskFilters>({});
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [filters, setFilters] = React.useState<TaskFilters>({});
   const [scrollContainerRef, setScrollContainerRef] =
-    useState<HTMLDivElement | null>(null);
-  const [topScrollRef, setTopScrollRef] = useState<HTMLDivElement | null>(null);
-  const [needsHorizontalScroll, setNeedsHorizontalScroll] = useState(false);
-  const [showColumnManagement, setShowColumnManagement] = useState(false);
+    React.useState<HTMLDivElement | null>(null);
+  const [topScrollRef, setTopScrollRef] = React.useState<HTMLDivElement | null>(
+    null
+  );
+  const [needsHorizontalScroll, setNeedsHorizontalScroll] =
+    React.useState(false);
+  const [showColumnManagement, setShowColumnManagement] = React.useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -94,7 +94,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     })
   );
 
-  const handleCreateTask = useCallback(
+  const handleCreateTask = React.useCallback(
     async (taskData: CreateTaskRequest) => {
       if (!currentUser || !PermissionService.canCreateTask(currentUser)) {
         showError(
@@ -119,7 +119,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [createTask, closeModal, currentUser, showSuccess, showError]
   );
 
-  const handleUpdateTask = useCallback(
+  const handleUpdateTask = React.useCallback(
     async (taskId: string, taskData: UpdateTaskRequest) => {
       if (!currentUser || !PermissionService.canEditTask(currentUser)) {
         showError(
@@ -137,14 +137,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         );
         closeModal();
       } catch (err) {
-        console.error("Error updating task:", err);
         showError("Update Failed", "Failed to update task");
       }
     },
     [updateTask, closeModal, currentUser, showSuccess, showError]
   );
 
-  const handleDeleteTask = useCallback(
+  const handleDeleteTask = React.useCallback(
     async (taskId: string) => {
       if (!currentUser || !PermissionService.canDeleteTask(currentUser)) {
         showError(
@@ -172,7 +171,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [deleteTask, closeModal, currentUser, board, showSuccess, showError]
   );
 
-  const handleMoveTask = useCallback(
+  const handleMoveTask = React.useCallback(
     async (taskId: string, newStatus: TaskStatus, newPosition?: number) => {
       try {
         await moveTask(taskId, newStatus, newPosition);
@@ -186,7 +185,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [moveTask, board, showSuccess, showError]
   );
 
-  const handleDragStart = useCallback(
+  const handleDragStart = React.useCallback(
     (event: DragStartEvent) => {
       const { active } = event;
       const task = board?.tasks[active.id as string];
@@ -197,7 +196,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [board]
   );
 
-  const handleDragEnd = useCallback(
+  const handleDragEnd = React.useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveTask(null);
@@ -269,7 +268,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [board, handleMoveTask]
   );
 
-  const handleTaskSave = useCallback(
+  const handleTaskSave = React.useCallback(
     async (taskData: CreateTaskRequest | UpdateTaskRequest) => {
       if (isCreating) {
         await handleCreateTask(taskData as CreateTaskRequest);
@@ -281,7 +280,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   );
 
   // Filter tasks based on search and filters
-  const filteredColumnData = useMemo(() => {
+  const filteredColumnData = React.useMemo(() => {
     if (!board) return [];
 
     return columnData.map(({ column, tasks }) => {
@@ -324,15 +323,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     });
   }, [columnData, searchTerm, filters, board]);
 
-  const handleSearchChange = useCallback((term: string) => {
+  const handleSearchChange = React.useCallback((term: string) => {
     setSearchTerm(term);
   }, []);
 
-  const handleFiltersChange = useCallback((newFilters: TaskFilters) => {
+  const handleFiltersChange = React.useCallback((newFilters: TaskFilters) => {
     setFilters(newFilters);
   }, []);
 
-  const handleAddComment = useCallback(
+  const handleAddComment = React.useCallback(
     async (taskId: string, content: string) => {
       if (!currentUser || !board) return;
 
@@ -391,7 +390,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [boardId, currentUser, board, updateBoardState]
   );
 
-  const handleDeleteComment = useCallback(
+  const handleDeleteComment = React.useCallback(
     async (taskId: string, commentId: string) => {
       if (!currentUser || !board) return;
 
@@ -438,13 +437,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [boardId, currentUser, board, updateBoardState]
   );
 
-  const handleColumnsUpdate = useCallback(() => {
+  const handleColumnsUpdate = React.useCallback(() => {
     // This will be handled by the API calls within ColumnManagement
     // The component uses optimistic updates via onBoardStateUpdate
   }, []);
 
   // Custom collision detection that prioritizes column drop zones
-  const customCollisionDetection = useCallback(
+  const customCollisionDetection = React.useCallback(
     (args: any) => {
       // First, try to find collisions with columns
       const columnCollisions = rectIntersection({
@@ -465,7 +464,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   );
 
   // Check if horizontal scrolling is needed
-  const checkScrollNeeded = useCallback(() => {
+  const checkScrollNeeded = React.useCallback(() => {
     if (scrollContainerRef) {
       const needsScroll =
         scrollContainerRef.scrollWidth > scrollContainerRef.clientWidth;
@@ -474,7 +473,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   }, [scrollContainerRef]);
 
   // Sync scrolling between top scrollbar and content
-  const handleTopScroll = useCallback(
+  const handleTopScroll = React.useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
       if (scrollContainerRef) {
         scrollContainerRef.scrollLeft = e.currentTarget.scrollLeft;
@@ -483,7 +482,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     [scrollContainerRef]
   );
 
-  const handleContentScroll = useCallback(
+  const handleContentScroll = React.useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
       if (topScrollRef) {
         topScrollRef.scrollLeft = e.currentTarget.scrollLeft;
@@ -507,11 +506,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     }
   }, [scrollContainerRef, checkScrollNeeded]);
 
-  const renderContent = useMemo(() => {
+  const renderContent = React.useMemo(() => {
     if (loading) {
       return (
         <div className="flex flex-col h-screen overflow-y-hidden">
-          {/* Skeleton Board Header */}
           <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <SkeletonButton className="w-12" />

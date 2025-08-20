@@ -1,13 +1,13 @@
-import React, { useEffect } from 'react';
-import { X } from 'lucide-react';
-import { Button } from './Button';
+import React, { useEffect } from "react";
+import { X } from "lucide-react";
+import { Button } from "./Button";
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -15,49 +15,50 @@ export const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
-  size = 'md'
+  size = "md",
 }) => {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
     };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
+    sm: "max-w-md",
+    md: "max-w-lg",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl",
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
         onClick={onClose}
       />
-      
-      {/* Modal */}
-      <div className={`relative bg-white rounded-lg shadow-xl ${sizeClasses[size]} w-full mx-2 sm:mx-4 max-h-[90vh] overflow-hidden animate-slide-up`}>
-        {/* Header */}
+
+      <div
+        className={`relative bg-white rounded-lg shadow-xl ${sizeClasses[size]} w-full mx-2 sm:mx-4 max-h-[90vh] overflow-hidden animate-slide-up`}
+      >
         {title && (
           <div className="flex items-center justify-between p-4 sm:p-6 border-b border-secondary-200">
-            <h2 className="text-lg sm:text-xl font-semibold text-secondary-900">{title}</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-secondary-900">
+              {title}
+            </h2>
             <Button
               variant="ghost"
               size="icon"
@@ -68,9 +69,12 @@ export const Modal: React.FC<ModalProps> = ({
             </Button>
           </div>
         )}
-        
-        {/* Content */}
-        <div className={`${title ? 'p-4 sm:p-6' : ''} overflow-y-auto ${title ? 'max-h-[calc(90vh-120px)]' : 'max-h-[90vh]'}`}>
+
+        <div
+          className={`${title ? "p-4 sm:p-6" : ""} overflow-y-auto ${
+            title ? "max-h-[calc(90vh-120px)]" : "max-h-[90vh]"
+          }`}
+        >
           {children}
         </div>
       </div>

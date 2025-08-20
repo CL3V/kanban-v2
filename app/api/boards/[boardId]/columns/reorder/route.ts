@@ -21,7 +21,6 @@ export async function POST(
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    // Validate that all provided column IDs exist in the board
     const existingColumnIds = board.columns.map((col) => col.id);
     const validColumnIds = columnIds.filter((id) =>
       existingColumnIds.includes(id)
@@ -34,7 +33,6 @@ export async function POST(
       );
     }
 
-    // Reorder columns based on the provided order
     const reorderedColumns = validColumnIds.map(
       (id) => board.columns.find((col) => col.id === id)!
     );

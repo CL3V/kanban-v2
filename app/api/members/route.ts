@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { MemberService } from "@/lib/member-service";
-import { Member } from "@/types/kanban";
+import {
+  memberSchema,
+  validateRequestSize,
+  sanitizeHtml,
+} from "@/lib/validation";
+import { z } from "zod";
 
-// GET /api/members - Get all global members
 export async function GET() {
   try {
     const members = await MemberService.getAllMembers();
@@ -10,40 +14,67 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching members:", error);
     return NextResponse.json(
-      { error: "Failed to fetch members" },
+      { error: "An error occurred while fetching members" },
       { status: 500 }
     );
   }
 }
 
-// POST /api/members - Add a new member
 export async function POST(request: NextRequest) {
   try {
-    const memberData = await request.json();
+    const body = await request.json();
 
-    // Validate required fields
-    if (!memberData.name || !memberData.email) {
+    validateRequestSize(body, 64);
+
+    const validationResult = memberSchema.safeParse(body);
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: "Name and email are required" },
+        { error: "Invalid input", details: validationResult.error.flatten() },
         { status: 400 }
       );
     }
 
-    const newMember = await MemberService.addMember(memberData);
+    const validatedData = validationResult.data;
+
+    const sanitizedData = {
+      ...validatedData,
+      name: sanitizeHtml(validatedData.name),
+      email: validatedData.email.toLowerCase().trim(), // Normalize email
+    };
+
+    const newMember = await MemberService.addMember(sanitizedData);
 
     return NextResponse.json(
       { member: newMember, message: "Member added successfully" },
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("Error adding member:", error);
-
     if (error.message === "Member with this email already exists") {
-      return NextResponse.json({ error: error.message }, { status: 409 });
+      return NextResponse.json(
+        { error: "Email already in use" },
+        { status: 409 }
+      );
+    }
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input data" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      error instanceof Error &&
+      error.message.includes("Request body too large")
+    ) {
+      return NextResponse.json(
+        { error: "Request body too large" },
+        { status: 413 }
+      );
     }
 
     return NextResponse.json(
-      { error: "Failed to add member" },
+      { error: "An error occurred while adding the member" },
       { status: 500 }
     );
   }

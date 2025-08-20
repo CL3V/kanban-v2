@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
+import { Settings } from "lucide-react";
+
 import { Board, Member } from "@/types/kanban";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
 import { MemberManagement } from "./MemberManagement";
 import { ColumnManagement } from "./ColumnManagement";
 import { BoardDetailsManagement } from "./BoardDetailsManagement";
-import { Settings, X } from "lucide-react";
 import { PermissionService } from "@/lib/PermissionService";
 
 interface BoardSettingsProps {
@@ -29,17 +30,16 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
   onClose: externalOnClose,
   currentUser,
 }) => {
-  const [internalIsOpen, setInternalIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"details" | "members" | "columns">(
-    "details"
-  );
+  const [internalIsOpen, setInternalIsOpen] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<
+    "details" | "members" | "columns"
+  >("details");
 
   const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
   const onClose = externalOnClose || (() => setInternalIsOpen(false));
   const onOpen = () =>
     externalIsOpen === undefined ? setInternalIsOpen(true) : undefined;
 
-  // Optimistic update functions
   const handleMembersUpdate = () => {
     if (onBoardStateUpdate) {
       // This will be handled by the API calls within MemberManagement
@@ -83,7 +83,6 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
 
       <Modal isOpen={isOpen} onClose={onClose} title="Board Settings" size="lg">
         <div className="space-y-6">
-          {/* Board Info */}
           <div className="pb-4 border-b border-secondary-200">
             <h2 className="text-lg font-semibold text-secondary-900 mb-1">
               {board.title}
@@ -93,7 +92,6 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
             )}
           </div>
 
-          {/* Tabs */}
           <div className="flex space-x-1 bg-secondary-100 p-1 rounded-lg">
             <button
               onClick={() => setActiveTab("details")}
@@ -131,7 +129,6 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
             )}
           </div>
 
-          {/* Tab Content */}
           <div className="min-h-[400px]">
             {activeTab === "details" && (
               <BoardDetailsManagement

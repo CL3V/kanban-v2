@@ -1,32 +1,28 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { ArrowLeft } from "lucide-react";
+
 import { Button } from "@/components/ui/Button";
 import MemberManagementHome from "@/components/MemberManagementHome";
 import { UserAvatar } from "@/components/UserAvatar";
-import { ArrowLeft } from "lucide-react";
 import { Member } from "@/types/kanban";
-import {
-  SkeletonCard,
-  SkeletonHeader,
-  SkeletonButton,
-} from "@/components/ui/Skeleton";
+import { SkeletonHeader, SkeletonButton } from "@/components/ui/Skeleton";
 
 export default function MembersManagementPage() {
-  const [currentUser, setCurrentUser] = useState<Member | null>(null);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [membersLoading, setMembersLoading] = useState(true);
+  const [currentUser, setCurrentUser] = React.useState<Member | null>(null);
+  const [members, setMembers] = React.useState<Member[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [membersLoading, setMembersLoading] = React.useState(true);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const savedUser = localStorage.getItem("currentUser");
     if (savedUser) setCurrentUser(JSON.parse(savedUser));
     setLoading(false);
     fetchMembers();
 
-    // Set page title
     document.title = "Members | Juke";
   }, []);
 
@@ -50,8 +46,7 @@ export default function MembersManagementPage() {
     localStorage.setItem("currentUser", JSON.stringify(user));
   };
 
-  // Redirect basic members back to home
-  useEffect(() => {
+  React.useEffect(() => {
     if (!loading && currentUser?.role === "member") {
       window.location.href = "/";
     }
@@ -59,11 +54,9 @@ export default function MembersManagementPage() {
 
   if (!currentUser || currentUser.role === "member") return null;
 
-  // Show skeleton while members are loading
   if (membersLoading) {
     return (
       <div className="min-h-screen bg-white">
-        {/* Top bar - consistent with dashboard */}
         <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
           <div className="max-w-6xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -98,9 +91,7 @@ export default function MembersManagementPage() {
           </div>
         </header>
 
-        {/* Content */}
         <main className="max-w-6xl mx-auto px-6 lg:px-8 py-8">
-          {/* Page navigation */}
           <div className="flex items-center gap-3 mb-8">
             <Link href="/">
               <Button
@@ -151,7 +142,6 @@ export default function MembersManagementPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Top bar - consistent with dashboard */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -184,9 +174,7 @@ export default function MembersManagementPage() {
         </div>
       </header>
 
-      {/* Content */}
       <main className="max-w-6xl mx-auto px-6 lg:px-8 py-8">
-        {/* Page navigation */}
         <div className="flex items-center gap-3 mb-8">
           <Link href="/">
             <Button

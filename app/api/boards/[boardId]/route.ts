@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { S3Service } from "@/lib/s3-service";
-import { UpdateBoardRequest } from "@/types/kanban";
+import {
+  validateBoardId,
+  updateBoardSchema,
+  validateRequestSize,
+  sanitizeHtml,
+} from "@/lib/validation";
+import { z } from "zod";
 
 export async function GET(
   request: NextRequest,
@@ -8,7 +14,10 @@ export async function GET(
 ) {
   try {
     const { boardId } = await params;
-    const board = await S3Service.getBoard(boardId);
+
+    const validatedBoardId = validateBoardId(boardId);
+
+    const board = await S3Service.getBoard(validatedBoardId);
 
     if (!board) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
@@ -16,9 +25,15 @@ export async function GET(
 
     return NextResponse.json(board);
   } catch (error) {
-    console.error("Error fetching board:", error);
+    if (error instanceof Error && error.message === "Invalid board ID") {
+      return NextResponse.json(
+        { error: "Invalid board ID format" },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to fetch board" },
+      { error: "An error occurred while fetching the board" },
       { status: 500 }
     );
   }
@@ -30,68 +45,90 @@ export async function PUT(
 ) {
   try {
     const { boardId } = await params;
-    console.log("Updating board:", boardId);
+    const validatedBoardId = validateBoardId(boardId);
+    const body = await request.json();
 
-    const body: UpdateBoardRequest = await request.json();
-    console.log("Update request body:", body);
+    validateRequestSize(body, 2048);
 
-    const existingBoard = await S3Service.getBoard(boardId);
-    console.log("Existing board found:", !!existingBoard);
+    const validationResult = updateBoardSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: "Invalid input", details: validationResult.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const validatedData = validationResult.data;
+
+    const existingBoard = await S3Service.getBoard(validatedBoardId);
 
     if (!existingBoard) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    // Validate that the board has required fields
     if (!existingBoard.id) {
-      console.error("Existing board missing ID");
       return NextResponse.json(
-        { error: "Board data corrupted - missing ID" },
+        { error: "Board data corrupted" },
         { status: 500 }
       );
     }
 
+    const sanitizedData = {
+      ...validatedData,
+      title: validatedData.title
+        ? sanitizeHtml(validatedData.title)
+        : undefined,
+      description: validatedData.description
+        ? sanitizeHtml(validatedData.description)
+        : undefined,
+    };
+
     const updatedBoard = {
       ...existingBoard,
-      ...body,
-      id: existingBoard.id, // Ensure ID is preserved
+      ...sanitizedData,
+      id: existingBoard.id,
       updatedAt: new Date().toISOString(),
     };
 
-    console.log("Prepared updated board:", {
-      id: updatedBoard.id,
-      title: updatedBoard.title,
-      description: updatedBoard.description,
-      keys: Object.keys(updatedBoard),
-    });
-
-    // Test serialization before sending to S3
     try {
       JSON.stringify(updatedBoard);
-      console.log("Board serialization test passed");
     } catch (serError) {
-      console.error("Board serialization failed:", serError);
       return NextResponse.json(
-        { error: "Board data contains non-serializable content" },
+        { error: "Board data contains invalid content" },
         { status: 400 }
       );
     }
 
     await S3Service.updateBoard(updatedBoard);
-    console.log("Board updated successfully");
 
     return NextResponse.json(updatedBoard);
   } catch (error) {
-    console.error("Error updating board - detailed:", {
-      name: error instanceof Error ? error.name : "Unknown",
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    });
+    if (error instanceof Error && error.message === "Invalid board ID") {
+      return NextResponse.json(
+        { error: "Invalid board ID format" },
+        { status: 400 }
+      );
+    }
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Invalid input data" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      error instanceof Error &&
+      error.message.includes("Request body too large")
+    ) {
+      return NextResponse.json(
+        { error: "Request body too large" },
+        { status: 413 }
+      );
+    }
+
     return NextResponse.json(
-      {
-        error: "Failed to update board",
-        details: error instanceof Error ? error.message : String(error),
-      },
+      { error: "An error occurred while updating the board" },
       { status: 500 }
     );
   }
@@ -101,73 +138,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ boardId: string }> }
 ) {
-  try {
-    const { boardId } = await params;
-    console.log("Updating board:", boardId);
-
-    const body: UpdateBoardRequest = await request.json();
-    console.log("Update request body:", body);
-
-    const existingBoard = await S3Service.getBoard(boardId);
-    console.log("Existing board found:", !!existingBoard);
-
-    if (!existingBoard) {
-      return NextResponse.json({ error: "Board not found" }, { status: 404 });
-    }
-
-    // Validate that the board has required fields
-    if (!existingBoard.id) {
-      console.error("Existing board missing ID");
-      return NextResponse.json(
-        { error: "Board data corrupted - missing ID" },
-        { status: 500 }
-      );
-    }
-
-    const updatedBoard = {
-      ...existingBoard,
-      ...body,
-      id: existingBoard.id, // Ensure ID is preserved
-      updatedAt: new Date().toISOString(),
-    };
-
-    console.log("Prepared updated board:", {
-      id: updatedBoard.id,
-      title: updatedBoard.title,
-      description: updatedBoard.description,
-      keys: Object.keys(updatedBoard),
-    });
-
-    // Test serialization before sending to S3
-    try {
-      JSON.stringify(updatedBoard);
-      console.log("Board serialization test passed");
-    } catch (serError) {
-      console.error("Board serialization failed:", serError);
-      return NextResponse.json(
-        { error: "Board data contains non-serializable content" },
-        { status: 400 }
-      );
-    }
-
-    await S3Service.updateBoard(updatedBoard);
-    console.log("Board updated successfully");
-
-    return NextResponse.json(updatedBoard);
-  } catch (error) {
-    console.error("Error updating board - detailed:", {
-      name: error instanceof Error ? error.name : "Unknown",
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    return NextResponse.json(
-      {
-        error: "Failed to update board",
-        details: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
-  }
+  return PUT(request, { params });
 }
 
 export async function DELETE(
@@ -176,38 +147,49 @@ export async function DELETE(
 ) {
   try {
     const { boardId } = await params;
-    const body = await request.json();
-    const { boardName } = body;
 
-    // Validate that board name is provided
-    if (!boardName || typeof boardName !== "string") {
+    const validatedBoardId = validateBoardId(boardId);
+
+    const body = await request.json();
+
+    const deleteSchema = z.object({
+      boardName: z.string().min(1, "Board name is required"),
+    });
+
+    const validationResult = deleteSchema.safeParse(body);
+    if (!validationResult.success) {
       return NextResponse.json(
         { error: "Board name is required for deletion confirmation" },
         { status: 400 }
       );
     }
 
-    const existingBoard = await S3Service.getBoard(boardId);
+    const existingBoard = await S3Service.getBoard(validatedBoardId);
 
     if (!existingBoard) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
     }
 
-    // Validate that the provided board name matches the actual board title
-    if (boardName !== existingBoard.title) {
+    if (validationResult.data.boardName !== existingBoard.title) {
       return NextResponse.json(
         { error: "Board name does not match. Deletion cancelled." },
         { status: 400 }
       );
     }
 
-    await S3Service.deleteBoard(boardId);
+    await S3Service.deleteBoard(validatedBoardId);
 
     return NextResponse.json({ message: "Board deleted successfully" });
   } catch (error) {
-    console.error("Error deleting board:", error);
+    if (error instanceof Error && error.message === "Invalid board ID") {
+      return NextResponse.json(
+        { error: "Invalid board ID format" },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to delete board" },
+      { error: "An error occurred while deleting the board" },
       { status: 500 }
     );
   }

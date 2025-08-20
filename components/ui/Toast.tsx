@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  Info,
-  X,
-  Zap,
-} from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -35,7 +28,6 @@ export const ToastComponent: React.FC<ToastComponentProps> = ({
   const [isLeaving, setIsLeaving] = useState(false);
 
   useEffect(() => {
-    // Animate in
     const timer = setTimeout(() => setIsVisible(true), 50);
     return () => clearTimeout(timer);
   }, []);
@@ -138,7 +130,6 @@ export const ToastComponent: React.FC<ToastComponentProps> = ({
         backdropFilter: "blur(10px)",
       }}
     >
-      {/* Progress Bar */}
       {toast.duration !== 0 && (
         <div className="absolute top-0 left-0 h-1 w-full bg-gray-100">
           <div
@@ -153,17 +144,14 @@ export const ToastComponent: React.FC<ToastComponentProps> = ({
 
       <div className="p-4">
         <div className="flex items-start space-x-3">
-          {/* Icon */}
           {getIcon()}
 
-          {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
               <h4 className="text-sm font-semibold text-gray-900 truncate">
                 {toast.title}
               </h4>
 
-              {/* Close Button */}
               <button
                 onClick={handleClose}
                 className="ml-2 flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300"
@@ -211,7 +199,6 @@ export const ToastComponent: React.FC<ToastComponentProps> = ({
         </div>
       </div>
 
-      {/* Subtle gradient overlay */}
       <div
         className="absolute inset-0 pointer-events-none opacity-10"
         style={{

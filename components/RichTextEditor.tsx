@@ -14,6 +14,7 @@ import {
   ContentState,
 } from "draft-js";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import { validateDraftContent, sanitizeDraftContent } from "@/lib/draft-validator";
 
 interface RichTextEditorProps {
   value: string;
@@ -42,9 +43,17 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       if (value && value.trim()) {
         // Try to parse as Draft.js raw state first
         try {
-          const rawState = JSON.parse(value);
-          const contentState = convertFromRaw(rawState);
-          return EditorState.createWithContent(contentState);
+          // Validate the content before using it
+          if (validateDraftContent(value)) {
+            const sanitized = sanitizeDraftContent(value);
+            const rawState = JSON.parse(sanitized);
+            const contentState = convertFromRaw(rawState);
+            return EditorState.createWithContent(contentState);
+          } else {
+            // If validation fails, treat as plain text
+            const contentState = ContentState.createFromText(value);
+            return EditorState.createWithContent(contentState);
+          }
         } catch {
           // If not valid JSON, treat as plain text
           const contentState = ContentState.createFromText(value);
@@ -122,10 +131,23 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         const rawState = convertToRaw(contentState);
         // Store as JSON string for compatibility
         const nextValue = JSON.stringify(rawState);
-        // Only emit when value actually changes to avoid prop echo loops
-        if (nextValue !== lastEmittedValueRef.current) {
-          lastEmittedValueRef.current = nextValue;
-          onChange(nextValue);
+        
+        // Validate and sanitize before emitting
+        if (validateDraftContent(nextValue)) {
+          const sanitizedValue = sanitizeDraftContent(nextValue);
+          // Only emit when value actually changes to avoid prop echo loops
+          if (sanitizedValue !== lastEmittedValueRef.current) {
+            lastEmittedValueRef.current = sanitizedValue;
+            onChange(sanitizedValue);
+          }
+        } else {
+          // If validation fails, emit plain text
+          const plainText = contentState.getPlainText();
+          const plainContent = JSON.stringify(convertToRaw(ContentState.createFromText(plainText)));
+          if (plainContent !== lastEmittedValueRef.current) {
+            lastEmittedValueRef.current = plainContent;
+            onChange(plainContent);
+          }
         }
       } catch (error) {
         console.error("Error handling editor state change:", error);

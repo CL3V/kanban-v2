@@ -1,13 +1,14 @@
 import React from "react";
-import { Column as ColumnType, Task, Member } from "@/types/kanban";
-import { TaskCard } from "./TaskCard";
-import { Plus } from "lucide-react";
-import { Button } from "./ui/Button";
-import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { useDroppable } from "@dnd-kit/core";
+import { Plus } from "lucide-react";
+
+import { Column as ColumnType, Task, Member } from "@/types/kanban";
+import { TaskCard } from "./TaskCard";
+import { Button } from "./ui/Button";
 
 interface ColumnProps {
   column: ColumnType;
@@ -41,11 +42,9 @@ export const Column: React.FC<ColumnProps> = ({
           : "border-gray-200 hover:border-gray-300"
       }`}
     >
-      {/* Column Header */}
       <div className="p-3 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            {/* Color indicator */}
             <div
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: column.color }}
