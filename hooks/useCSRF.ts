@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export function useCSRF() {
-  const [csrfToken, setCSRfToken] = useState<string | null>(null);
+  const [csrfToken, setCSRFToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchCSRFToken = useCallback(async () => {
@@ -9,7 +9,7 @@ export function useCSRF() {
       const response = await fetch('/api/csrf');
       if (response.ok) {
         const data = await response.json();
-        setCSrfToken(data.token);
+        setCSRFToken(data.token);
       }
     } catch (error) {
       console.error('Failed to fetch CSRF token:', error);

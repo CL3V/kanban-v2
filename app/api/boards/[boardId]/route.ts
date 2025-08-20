@@ -73,15 +73,28 @@ export async function PUT(
       );
     }
 
-    const sanitizedData = {
-      ...validatedData,
-      title: validatedData.title
-        ? sanitizeHtml(validatedData.title)
-        : undefined,
-      description: validatedData.description
-        ? sanitizeHtml(validatedData.description)
-        : undefined,
-    };
+    // Sanitize text fields and filter out undefined values
+    const sanitizedData: any = {};
+    
+    // Only include fields that are provided
+    if (validatedData.title !== undefined) {
+      sanitizedData.title = sanitizeHtml(validatedData.title);
+    }
+    if (validatedData.description !== undefined) {
+      sanitizedData.description = sanitizeHtml(validatedData.description);
+    }
+    if (validatedData.columns !== undefined) {
+      sanitizedData.columns = validatedData.columns;
+    }
+    if (validatedData.tasks !== undefined) {
+      sanitizedData.tasks = validatedData.tasks;
+    }
+    if (validatedData.members !== undefined) {
+      sanitizedData.members = validatedData.members;
+    }
+    if (validatedData.settings !== undefined) {
+      sanitizedData.settings = validatedData.settings;
+    }
 
     const updatedBoard = {
       ...existingBoard,

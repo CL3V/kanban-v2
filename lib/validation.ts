@@ -14,7 +14,7 @@ export const validators = {
   memberName: z.string().min(1, 'Name is required').max(100, 'Name too long'),
   tag: z.string().min(1).max(50, 'Tag too long'),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
-  role: z.enum(['admin', 'member', 'viewer']),
+  role: z.enum(['admin', 'project_manager', 'member', 'viewer']),
 };
 
 // HTML/Script sanitization
@@ -107,8 +107,8 @@ export const updateBoardSchema = z.object({
   title: validators.boardTitle.optional(),
   description: validators.boardDescription.optional(),
   columns: z.array(z.any()).optional(),
-  tasks: z.record(z.any()).optional(),
-  members: z.record(z.any()).optional(),
+  tasks: z.record(z.string(), z.any()).optional(),
+  members: z.record(z.string(), z.any()).optional(),
   settings: z.any().optional(),
 });
 

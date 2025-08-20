@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       ...validatedData,
       name: sanitizeHtml(validatedData.name),
       email: validatedData.email.toLowerCase().trim(), // Normalize email
+      color: MemberService.getAvatarColor(validatedData.name), // Generate color based on name
     };
 
     const newMember = await MemberService.addMember(sanitizedData);
