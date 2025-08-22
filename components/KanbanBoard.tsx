@@ -739,6 +739,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           columns={board?.columns || []}
           onColumnsUpdate={handleColumnsUpdate}
           onBoardStateUpdate={updateBoardState}
+          currentUser={currentUser}
         />
       </Modal>
     </div>

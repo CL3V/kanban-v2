@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { S3Service } from "@/lib/s3-service";
 import { Column } from "@/types/kanban";
+import { PermissionService } from "@/lib/PermissionService";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(
@@ -18,9 +19,53 @@ export async function POST(
       );
     }
 
+    // Get current user from request headers (assuming it's passed from frontend)
+    const currentUserHeader = request.headers.get("x-current-user");
+    if (!currentUserHeader) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    let currentUser;
+    try {
+      currentUser = JSON.parse(currentUserHeader);
+    } catch (error) {
+      return NextResponse.json({ error: "Invalid user data" }, { status: 400 });
+    }
+
+    if (!currentUser || !currentUser.id) {
+      return NextResponse.json(
+        { error: "Valid user required" },
+        { status: 401 }
+      );
+    }
+
     const existingBoard = await S3Service.getBoard(boardId);
     if (!existingBoard) {
       return NextResponse.json({ error: "Board not found" }, { status: 404 });
+    }
+
+    // Check if user is a member of the board
+    const boardMembers = Object.values(existingBoard.members || {});
+    const userIsMember = boardMembers.some(
+      (member) => member.id === currentUser.id
+    );
+
+    if (!userIsMember) {
+      return NextResponse.json(
+        { error: "You don't have access to this board" },
+        { status: 403 }
+      );
+    }
+
+    // Check if user has permission to manage columns
+    if (!PermissionService.canManageColumns(currentUser)) {
+      return NextResponse.json(
+        { error: "You don't have permission to manage columns" },
+        { status: 403 }
+      );
     }
 
     const statusExists = existingBoard.columns.some(

@@ -18,7 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { arrayMove } from "@dnd-kit/sortable";
 
-import { Column, Board } from "@/types/kanban";
+import { Column, Board, Member } from "@/types/kanban";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
 import { useToast } from "@/contexts/ToastContext";
@@ -28,6 +28,7 @@ interface ColumnManagementProps {
   columns: Column[];
   onColumnsUpdate: () => void;
   onBoardStateUpdate?: (updater: (board: Board) => Board) => void;
+  currentUser?: Member;
 }
 
 interface SortableColumnItemProps {
@@ -121,6 +122,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
   columns,
   onColumnsUpdate,
   onBoardStateUpdate,
+  currentUser,
 }) => {
   const { showSuccess, showError } = useToast();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -179,6 +181,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-current-user": currentUser ? JSON.stringify(currentUser) : "",
         },
         body: JSON.stringify({
           columnIds: reorderedColumns.map((col) => col.id),
@@ -251,7 +254,10 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-current-user": currentUser ? JSON.stringify(currentUser) : "",
+        },
         body: JSON.stringify(submitData),
       });
 
@@ -315,6 +321,9 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
         `/api/boards/${boardId}/columns/${columnId}`,
         {
           method: "DELETE",
+          headers: {
+            "x-current-user": currentUser ? JSON.stringify(currentUser) : "",
+          },
         }
       );
 

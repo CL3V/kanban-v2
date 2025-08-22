@@ -153,6 +153,7 @@ export const BoardSettings: React.FC<BoardSettingsProps> = ({
                 columns={board.columns}
                 onColumnsUpdate={handleColumnsUpdate}
                 onBoardStateUpdate={onBoardStateUpdate}
+                currentUser={currentUser || undefined}
               />
             )}
           </div>
