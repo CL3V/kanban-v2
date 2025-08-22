@@ -1,10 +1,14 @@
-import { useState, useEffect } from "react";
-import { Member } from "@/types/kanban";
+import React, { useState, useEffect } from "react";
+import { Plus, Edit, Trash2, User, Check, X } from "lucide-react";
+
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
-import UserAvatar from "@/components/UserAvatar";
+import { useToast } from "@/contexts/ToastContext";
+import { useCSRF } from "@/hooks/useCSRF";
+import type { Member } from "@/types/kanban";
 import { PermissionService } from "@/lib/PermissionService";
-import { Plus, Edit2, Trash2, User, Mail, Shield } from "lucide-react";
 
 interface MemberManagementHomeProps {
   onMemberSelect?: (member: Member) => void;
@@ -15,6 +19,8 @@ export default function MemberManagementHome({
   onMemberSelect,
   currentUser,
 }: MemberManagementHomeProps) {
+  const { showSuccess, showError } = useToast();
+  const { secureApiCall } = useCSRF();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -88,7 +94,7 @@ export default function MemberManagementHome({
     }
 
     try {
-      const response = await fetch(`/api/members/${memberId}`, {
+      const response = await secureApiCall(`/api/members/${memberId}`, {
         method: "DELETE",
       });
 

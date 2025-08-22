@@ -7,6 +7,7 @@ import { Modal } from "./ui/Modal";
 import { UserAvatar } from "./UserAvatar";
 import { PermissionService } from "@/lib/PermissionService";
 import { useToast } from "@/contexts/ToastContext";
+import { useCSRF } from "@/hooks/useCSRF";
 import {
   Users,
   Plus,
@@ -34,6 +35,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
   onBoardStateUpdate,
 }) => {
   const { showSuccess, showError } = useToast();
+  const { secureApiCall } = useCSRF();
   const [currentUser, setCurrentUser] = React.useState<Member | null>(null);
   React.useEffect(() => {
     try {
@@ -105,7 +107,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
       setAddingMembers(true);
 
       for (const memberId of Array.from(selectedMembers)) {
-        const response = await fetch(`/api/boards/${boardId}/members`, {
+        const response = await secureApiCall(`/api/boards/${boardId}/members`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -185,7 +187,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
 
       const method = editingMember ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await secureApiCall(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -233,7 +235,7 @@ export const MemberManagement: React.FC<MemberManagementProps> = ({
     if (!confirm(`Remove ${memberName} from this board?`)) return;
 
     try {
-      const response = await fetch(
+      const response = await secureApiCall(
         `/api/boards/${boardId}/members/${memberId}`,
         {
           method: "DELETE",

@@ -10,6 +10,7 @@ import { UserSelector } from "@/components/UserSelector";
 import { UserAvatar } from "@/components/UserAvatar";
 import { DeleteBoardConfirmationDialog } from "@/components/DeleteBoardConfirmationDialog";
 import { useToast } from "@/contexts/ToastContext";
+import { useCSRF } from "@/hooks/useCSRF";
 import {
   SkeletonCard,
   SkeletonStats,
@@ -19,6 +20,7 @@ import type { Board, Member } from "@/types/kanban";
 
 export default function HomePage() {
   const { showSuccess, showError } = useToast();
+  const { secureApiCall } = useCSRF();
   const [boards, setBoards] = React.useState<Board[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [membersLoading, setMembersLoading] = React.useState(true);
@@ -103,15 +105,18 @@ export default function HomePage() {
   const confirmDeleteBoard = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/boards/${deleteDialog.boardId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          boardName: deleteDialog.boardTitle,
-        }),
-      });
+      const response = await secureApiCall(
+        `/api/boards/${deleteDialog.boardId}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            boardName: deleteDialog.boardTitle,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json();

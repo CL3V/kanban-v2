@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Member } from "@/types/kanban";
 import { UserAvatar } from "./UserAvatar";
 import { Button } from "./ui/Button";
@@ -14,6 +14,7 @@ import {
   Check,
   UserPlus,
 } from "lucide-react";
+import { useCSRF } from "@/hooks/useCSRF";
 
 interface UserSelectorProps {
   isOpen: boolean;
@@ -82,6 +83,8 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
   });
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
+  const { secureApiCall } = useCSRF();
+
   const handleUserSelect = (user: Member) => {
     setSelectedUser(user);
   };
@@ -135,15 +138,13 @@ export const UserSelector: React.FC<UserSelectorProps> = ({
     }
   };
 
-  const handleCreateMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleCreateMember = async () => {
     if (!validateForm()) {
       return;
     }
 
     try {
-      const response = await fetch("/api/members", {
+      const response = await secureApiCall("/api/members", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

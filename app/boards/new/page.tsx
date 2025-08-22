@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/contexts/ToastContext";
+import { useCSRF } from "@/hooks/useCSRF";
 
 export default function NewBoardPage() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
+  const { secureApiCall } = useCSRF();
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function NewBoardPage() {
 
     setIsCreating(true);
     try {
-      const response = await fetch("/api/boards", {
+      const response = await secureApiCall("/api/boards", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

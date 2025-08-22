@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Columns, Plus, Edit, Trash2, Hash, GripVertical } from "lucide-react";
 import {
   DndContext,
@@ -22,6 +22,7 @@ import { Column, Board, Member } from "@/types/kanban";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
 import { useToast } from "@/contexts/ToastContext";
+import { useCSRF } from "@/hooks/useCSRF";
 
 interface ColumnManagementProps {
   boardId: string;
@@ -125,6 +126,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
   currentUser,
 }) => {
   const { showSuccess, showError } = useToast();
+  const { csrfToken, secureApiCall } = useCSRF();
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingColumn, setEditingColumn] = React.useState<Column | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -177,16 +179,19 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
     setLocalColumns(reorderedColumns);
 
     try {
-      const response = await fetch(`/api/boards/${boardId}/columns/reorder`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-current-user": currentUser ? JSON.stringify(currentUser) : "",
-        },
-        body: JSON.stringify({
-          columnIds: reorderedColumns.map((col) => col.id),
-        }),
-      });
+      const response = await secureApiCall(
+        `/api/boards/${boardId}/columns/reorder`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-current-user": currentUser ? JSON.stringify(currentUser) : "",
+          },
+          body: JSON.stringify({
+            columnIds: reorderedColumns.map((col) => col.id),
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to reorder columns");
@@ -252,7 +257,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
 
       const method = editingColumn ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await secureApiCall(url, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -317,7 +322,7 @@ export const ColumnManagement: React.FC<ColumnManagementProps> = ({
       return;
 
     try {
-      const response = await fetch(
+      const response = await secureApiCall(
         `/api/boards/${boardId}/columns/${columnId}`,
         {
           method: "DELETE",

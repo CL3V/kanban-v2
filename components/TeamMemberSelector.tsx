@@ -5,6 +5,7 @@ import { Modal } from "./ui/Modal";
 import { UserAvatar } from "./UserAvatar";
 import { PermissionService } from "@/lib/PermissionService";
 import { Users, Plus, Check, X } from "lucide-react";
+import { useCSRF } from "@/hooks/useCSRF";
 
 interface TeamMemberSelectorProps {
   boardId: string;
@@ -19,6 +20,7 @@ export const TeamMemberSelector: React.FC<TeamMemberSelectorProps> = ({
   onMembersUpdate,
   currentUser,
 }) => {
+  const { secureApiCall } = useCSRF();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [globalMembers, setGlobalMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(false);
@@ -70,7 +72,7 @@ export const TeamMemberSelector: React.FC<TeamMemberSelectorProps> = ({
 
       // Add each selected member to the board
       for (const memberId of Array.from(selectedMembers)) {
-        const response = await fetch(`/api/boards/${boardId}/members`, {
+        const response = await secureApiCall(`/api/boards/${boardId}/members`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -104,7 +106,7 @@ export const TeamMemberSelector: React.FC<TeamMemberSelectorProps> = ({
     }
 
     try {
-      const response = await fetch(
+      const response = await secureApiCall(
         `/api/boards/${boardId}/members/${memberId}`,
         {
           method: "DELETE",
